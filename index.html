@@ -151,8 +151,8 @@
     <p class="text-base leading-relaxed ink2 max-w-3xl">
       Compare <strong class="ink1"><span id="provider-count">50</span>+ hosting providers</strong> across shared, VPS, managed WordPress, and hyperscale cloud tiers.
       Advertised <em>introductory</em> pricing is tracked as its own metric alongside the renewal rate you'll actually pay —
-      and plans whose renewal jumps ≥100% (and ≥$5/mo) over the teaser rate are flagged as
-      <span class="badge badge-predatory">⚠ Predatory intro</span> so you're never surprised at invoice two.
+      and when a renewal runs ≥100% (and ≥$5/mo) over the teaser rate, this tool flags it, in our opinion, as
+      <span class="badge badge-predatory">⚠ Predatory intro</span> so you're never surprised at invoice two. That's our formula-based read of the pricing math, not a claim about the company.
     </p>
   </div>
 
@@ -164,7 +164,7 @@
     <div class="flex items-start gap-3">
       <span class="text-xl leading-none mt-0.5">⚠</span>
       <div>
-        <p class="font-black text-sm mb-1" style="color: var(--crit-deep);">Predatory introductory pricing detected in your selection</p>
+        <p class="font-black text-sm mb-1" style="color: var(--crit-deep);">Our predatory-intro flag is on for part of your selection</p>
         <p class="text-xs ink2 leading-relaxed" id="predatory-alert-body"></p>
       </div>
     </div>
@@ -238,8 +238,9 @@
 
   <!-- ============ FOOTER / METHODOLOGY ============ -->
   <footer class="mt-14 text-xs ink3 leading-relaxed max-w-4xl space-y-2">
-    <p><strong class="ink2">Methodology.</strong> TCO is normalized to a 48-month window: intro price × promo term, plus renewal price × remaining months. A plan is flagged <strong style="color:var(--crit-deep)">predatory</strong> when renewal is ≥100% above the intro rate <em>and</em> the jump is ≥$5/mo; 50–99% is <strong style="color:var(--warn-deep)">steep</strong>. Flat-priced plans (no teaser) are marked <strong style="color:var(--good-deep)">✓ flat</strong>.</p>
-    <p><strong class="ink2">Data.</strong> Pricing snapshot of public list prices, compiled July 2026. Promotional rates change weekly — always confirm on the provider's site before purchase. The catalog is data-driven: to add a host, append one entry to the <code>providers</code> array.</p>
+    <p><strong class="ink2">How we flag pricing.</strong> The badges on this site are AgencyNexus's own classifications — our opinion, applied by a fixed formula, not statements of fact about any provider's conduct or intent. TCO is normalized to a 48-month window: intro price × promo term, plus renewal price × remaining months. We label a plan <strong style="color:var(--crit-deep)">predatory-intro</strong> when its renewal runs ≥100% <em>and</em> ≥$5/mo above the intro rate; <strong style="color:var(--warn-deep)">steep</strong> at 50–99%; and <strong style="color:var(--good-deep)">✓ flat</strong> when there is no teaser increase. These are structural descriptions of the pricing math; reasonable people may weigh the tradeoffs differently.</p>
+    <p><strong class="ink2">Data &amp; accuracy.</strong> Prices are a manually compiled snapshot of publicly listed rates (July 2026) and may be incomplete, out of date, or inaccurate; promotional rates change frequently. Always confirm current pricing on the provider's own site before purchasing — do not rely on this tool as the basis for a buying decision. The catalog is data-driven: to add or correct a host, edit its entry in the <code>providers</code> array.</p>
+    <p><strong class="ink2">Trademarks &amp; independence.</strong> Provider and plan names are trademarks of their respective owners, referenced here nominatively for identification and comparison only. AgencyNexus is independent and is not affiliated with, endorsed by, or sponsored by any provider listed, and — as of this snapshot — earns no affiliate commission on these listings. Nothing here is legal, financial, or purchasing advice.</p>
   </footer>
 </main>
 
@@ -515,10 +516,16 @@ function hikeInfo(p) {
   else                               { tier='moderate';  icon='↗'; word='Mild increase'; }
   return { pct, delta, tier, icon, word };
 }
+const BADGE_TITLE = {
+  flat:      'AgencyNexus classification: renewal equals the intro rate — no teaser increase.',
+  moderate:  'AgencyNexus classification: renewal is under 50% above the intro rate.',
+  steep:     'AgencyNexus classification: renewal is 50–99% above the intro rate.',
+  predatory: 'AgencyNexus classification — our opinion, applied by a fixed formula: renewal is ≥100% AND ≥$5/mo above the intro rate. This describes the pricing structure, not the provider’s conduct or intent.',
+};
 const badgeHtml = p => {
   const h = hikeInfo(p);
   const pctTxt = h.tier === 'flat' ? '' : ` +${Math.round(h.pct)}%`;
-  return `<span class="badge badge-${h.tier}">${h.icon} ${h.word}${pctTxt}</span>`;
+  return `<span class="badge badge-${h.tier}" title="${BADGE_TITLE[h.tier]}">${h.icon} ${h.word}${pctTxt}</span>`;
 };
 const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const money2 = n => '$' + Number(n).toFixed(2);
@@ -605,7 +612,7 @@ function renderAlert() {
       const h = hikeInfo(p);
       return `<strong class="ink1">${p.name}</strong> advertises ${money2(p.promo)}/mo but renews at ${money2(p.renewal)}/mo (+${Math.round(h.pct)}%, +${money2(h.delta)}/mo) after ${p.term} months`;
     }).join(' · ') +
-    '. The intro rate is still shown as its own metric in every chart — just budget for the renewal.';
+    '. The intro rate is still shown as its own metric in every chart — just budget for the renewal. “Predatory” here is our own label for this price gap, applied by a fixed formula, not a statement about the provider’s conduct.';
 }
 
 /* ===================== CATALOG ===================== */
@@ -671,8 +678,8 @@ function showDetails(id) {
     <p class="text-sm ink2 leading-relaxed mb-5">${p.blurb}</p>
     ${h.tier === 'predatory' ? `
       <div class="rounded-xl p-4 mb-5" style="background:var(--crit-bg); border:1px solid var(--crit);">
-        <p class="text-xs font-black mb-1" style="color:var(--crit-deep)">⚠ Predatory introductory pricing</p>
-        <p class="text-xs ink2">The advertised ${money2(p.promo)}/mo lasts ${p.term} months, then jumps ${Math.round(h.pct)}% to ${money2(p.renewal)}/mo (+${money2(h.delta)}/mo).${renewSpend(p) > 0 ? ` Within the 4-year window, ${money(introSpend(p))} is billed at the intro rate and ${money(renewSpend(p))} at the renewal rate.` : ` The intro rate covers the full 4-year window — the hike lands when the term renews after that, so budget ${money2(p.renewal)}/mo from year 5.`}</p>
+        <p class="text-xs font-black mb-1" style="color:var(--crit-deep)">⚠ Flagged predatory-intro <span class="font-semibold opacity-80">(our classification)</span></p>
+        <p class="text-xs ink2">The advertised ${money2(p.promo)}/mo lasts ${p.term} months, then jumps ${Math.round(h.pct)}% to ${money2(p.renewal)}/mo (+${money2(h.delta)}/mo).${renewSpend(p) > 0 ? ` Within the 4-year window, ${money(introSpend(p))} is billed at the intro rate and ${money(renewSpend(p))} at the renewal rate.` : ` The intro rate covers the full 4-year window — the hike lands when the term renews after that, so budget ${money2(p.renewal)}/mo from year 5.`} This is our formula-based label for the size of the increase, not a claim about the provider’s intent — always verify current pricing before deciding.</p>
       </div>` : ''}
     <div class="grid md:grid-cols-2 gap-6 mb-5">
       <div>
@@ -759,7 +766,7 @@ const CAPTIONS = {
   timeline:  'Cumulative spend from month 0 to 48. Kinks in a line mark the moment an introductory term expires and the renewal rate kicks in — the steeper the bend, the harder the hike.',
   tco:       'Total 4-year cost, split into spend billed at the intro rate (light) and at the renewal/standard rate (dark). Sorted cheapest first. A mostly-dark bar means the advertised teaser barely matters; flat-priced plans are fully dark by definition.',
   introrenew:'The advertised intro price (light) beside the renewal price you’ll actually pay (dark), per provider. Wide gaps between the pair are where budgets go to die.',
-  shock:     'Each dot is a provider: advertised intro price (x) versus the percentage jump at renewal (y). Dots above the dashed line — ≥100% with a ≥$5/mo jump — are flagged predatory.',
+  shock:     'Each dot is a provider: advertised intro price (x) versus the percentage jump at renewal (y). Dots above the dashed line meet our predatory-intro rule (≥100% and a ≥$5/mo jump) — our formula-based read of the price gap, not a claim about the provider.',
   storage:   'Included storage per plan, in GB. Unmetered plans are drawn full-width in gray — no fixed cap, subject to fair-use policies. Usage-based plans (some PaaS) are omitted.',
 };
 const thresholdLine = {
@@ -943,13 +950,13 @@ function renderChart() {
       data: { datasets: [
         { label: 'Standard pricing', data: std.map(pt), backgroundColor: t.accent,
           pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2 },
-        { label: 'Predatory intro (flagged)', data: bad.map(pt), backgroundColor: t.crit,
+        { label: 'Flagged predatory-intro (our rule)', data: bad.map(pt), backgroundColor: t.crit,
           pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2, pointStyle: 'rectRot' },
       ]},
       options: {
         ...baseOptions(t),
         plugins: { ...baseOptions(t).plugins,
-          thresholdLine: { y: 100, color: t.crit, label: '100% — predatory threshold' },
+          thresholdLine: { y: 100, color: t.crit, label: '100% — our predatory-intro flag' },
           tooltip: { ...baseOptions(t).plugins.tooltip,
             callbacks: {
               title: items => items[0].raw.name,
