@@ -3,403 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agency Hosting Intelligence Hub | 2026 Analysis</title>
+    <title>AgencyHost Nexus | Infrastructure Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chosen Palette: Sandstone & Slate - A professional, warm neutral palette with deep teal accents for clarity and calm focus. -->
+    <!-- Chosen Palette: Sandstone & Slate - A professional, warm neutral palette with deep teal for primary actions and rose-slate for financial warnings. -->
     <style>
         :root {
-            --bg-main: #fcfaf7;
-            --accent-soft: #e5e1da;
-            --accent-primary: #2d4356;
-            --accent-highlight: #435b66;
-            --text-main: #1a1a1a;
+            --bg-main: #fdfcfb;
+            --accent-primary: #0f172a;
+            --accent-teal: #0d9488;
+            --accent-rose: #e11d48;
+            --text-slate: #334155;
+            --card-border: #e2e8f0;
         }
-        body { background-color: var(--bg-main); color: var(--text-main); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
-        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(8px); border: 1px solid var(--accent-soft); }
-        .nav-link.active { border-bottom: 2px solid var(--accent-primary); color: var(--accent-primary); font-weight: 600; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .pros-list li::before { content: '✓'; color: #2d6a4f; margin-right: 0.5rem; font-weight: bold; }
-        .cons-list li::before { content: '✕'; color: #9b2226; margin-right: 0.5rem; font-weight: bold; }
+        body { background-color: var(--bg-main); color: var(--text-slate); font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid var(--card-border); }
+        .tab-active { border-bottom: 3px solid var(--accent-teal); color: var(--accent-teal); font-weight: 800; }
+        .chart-container { position: relative; width: 100%; max-width: 100%; height: 320px; max-height: 400px; margin: 0 auto; }
+        .hike-badge { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+        .selection-card.active { border-color: var(--accent-teal); background-color: #f0fdfa; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen pb-24">
 
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-50 glass-card px-6 py-4 flex flex-wrap justify-between items-center mb-8">
-        <div class="flex items-center space-x-2">
-            <span class="text-xl font-bold tracking-tight text-slate-800">AGENCY<span class="text-teal-700">HOST</span> LABS</span>
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-50 glass-card bg-white/90 border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xl italic">N</div>
+                <span class="text-xl font-bold tracking-tighter text-slate-800 uppercase italic">Agency<span class="text-teal-600 not-italic font-black">Nexus</span></span>
+            </div>
+            <div class="hidden md:flex space-x-2">
+                <button onclick="setTab('shared')" id="tab-shared" class="tab-active px-4 py-5 text-xs uppercase tracking-[0.15em] transition-all">Shared</button>
+                <button onclick="setTab('vps')" id="tab-vps" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">VPS / Managed</button>
+                <button onclick="setTab('cloud')" id="tab-cloud" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">Cloud Infrastructure</button>
+            </div>
+            <div class="flex items-center">
+                <span id="select-pill" class="bg-teal-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-teal-100">5 SELECTED</span>
+            </div>
         </div>
-        <div class="flex space-x-6 text-sm">
-            <button onclick="showSection('dashboard')" class="nav-link active px-2 py-1 transition-all" id="nav-dashboard">Executive Dashboard</button>
-            <button onclick="showSection('comparison')" class="nav-link px-2 py-1 transition-all" id="nav-comparison">Performance Matrix</button>
-            <button onclick="showSection('pricing')" class="nav-link px-2 py-1 transition-all" id="nav-pricing">Economic Modeler</button>
-        </div>
-    </nav>
+    </header>
 
-    <main class="max-w-6xl mx-auto px-4 pb-20">
+    <main class="max-w-7xl mx-auto px-6 py-12">
         
-        <!-- SECTION 1: EXECUTIVE DASHBOARD -->
-        <section id="dashboard" class="tab-content active space-y-12">
-            <div class="max-w-3xl">
-                <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Infrastructural Intelligence for HTML Deployments</h1>
-                <p class="text-lg text-slate-600 leading-relaxed">
-                    Welcome to the 2026 Agency Hosting Research Hub. For firms deploying mass HTML landing pages, traditional hosting metrics like "unlimited bandwidth" are secondary. This section provides an executive summary of the critical bottlenecks identified in our research: **Inode ceilings**, **NVMe retrieval speeds**, and **Web Server architecture**. Use the tools below to understand why LiteSpeed Enterprise and NVMe have become the mandatory standard for high-performance static delivery.
-                </p>
-            </div>
+        <!-- Intro Paragraph -->
+        <div class="max-w-4xl mb-12">
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight leading-none">The 2026 Agency Infrastructure Audit.</h1>
+            <p class="text-lg text-slate-600 leading-relaxed max-w-3xl">
+                This hub centralizes technical research for high-volume HTML deployments. We have analyzed 15+ providers across **Shared, VPS, and Cloud** tiers. The charts below default to the industry's "Big 5" shared hosts. You can use the selection engine to add more specialized infrastructure (like DigitalOcean or Vultr) to compare raw file limits, 4-year TCO, and renewal spikes in one unified view.
+            </p>
+        </div>
 
-            <!-- Key Insight Grid -->
-            <div class="grid md:grid-cols-3 gap-6">
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-teal-600">
-                    <h3 class="font-bold text-teal-800 mb-2">The Inode Imperative</h3>
-                    <p class="text-sm text-slate-600">When hosting thousands of independent HTML pages, you will hit file count (inode) limits long before disk space caps. Hostinger leads with up to 6 million inodes.</p>
+        <!-- Dashboard Charts (Default Comparison) -->
+        <div class="grid lg:grid-cols-2 gap-8 mb-16">
+            <div class="glass-card p-8 rounded-3xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">48-Month Total Cost of Ownership ($)</h3>
+                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Cumulative</span>
                 </div>
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-amber-600">
-                    <h3 class="font-bold text-amber-800 mb-2">The NVMe Necessity</h3>
-                    <p class="text-sm text-slate-600">Standard SSDs bottle-neck raw file reads. NVMe architecture interfaces directly with the PCIe bus, ensuring near-instantaneous asset delivery for landing pages.</p>
+                <div class="chart-container">
+                    <canvas id="costChart"></canvas>
                 </div>
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-slate-600">
-                    <h3 class="font-bold text-slate-800 mb-2">LiteSpeed Advantage</h3>
-                    <p class="text-sm text-slate-600">Apache struggles with high concurrency. LiteSpeed Enterprise handles 5x the traffic with minimal RAM, crucial for viral landing page traffic spikes.</p>
-                </div>
+                <p class="text-[10px] text-slate-400 mt-4 leading-relaxed">Calculates (Promo Price × Duration) + (Renewal Price × Remaining 48 Months). This cuts through the "Introductory" noise to show real agency overhead.</p>
             </div>
+            <div class="glass-card p-8 rounded-3xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">File Capacity (Inode Limit in Millions)</h3>
+                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Deployment Ceiling</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="limitChart"></canvas>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-4 leading-relaxed">The hard limit on how many individual HTML files can exist. VPS and Cloud typically offer "Unlimited" subject to disk space; Shared plans have strict ceilings.</p>
+            </div>
+        </div>
 
-            <!-- Dashboard Charts -->
-            <div class="grid md:grid-cols-2 gap-8 mt-12">
-                <div class="glass-card p-6 rounded-2xl shadow-sm">
-                    <h3 class="text-center font-bold text-slate-800 mb-4">Response Latency (TTFB) in ms</h3>
-                    <div class="chart-container">
-                        <canvas id="ttfbChart"></canvas>
-                    </div>
-                    <p class="text-xs text-center text-slate-500 mt-4">Lower is better. A2 Hosting leads in raw static file delivery speed.</p>
+        <!-- Selector Grid -->
+        <div class="mb-12">
+            <div class="flex items-end justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900 mb-1">Select Providers</h2>
+                    <p class="text-sm text-slate-500">Add or remove hosts from the analytical playground above.</p>
                 </div>
-                <div class="glass-card p-6 rounded-2xl shadow-sm">
-                    <h3 class="text-center font-bold text-slate-800 mb-4">Max Inode Allocation (Millions)</h3>
-                    <div class="chart-container">
-                        <canvas id="inodeChart"></canvas>
-                    </div>
-                    <p class="text-xs text-center text-slate-500 mt-4">Essential for mass-file deployment. Hostinger provides the highest "runway".</p>
-                </div>
+                <button onclick="resetSelection()" class="text-[10px] font-bold text-rose-600 uppercase tracking-widest hover:underline">Reset to Big 5</button>
             </div>
-        </section>
+            
+            <div id="selection-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <!-- Populated by JS -->
+            </div>
+        </div>
 
-        <!-- SECTION 2: PERFORMANCE MATRIX -->
-        <section id="comparison" class="tab-content space-y-12">
-            <div class="max-w-3xl">
-                <h2 class="text-3xl font-bold text-slate-900 mb-4">Provider Comparison Matrix</h2>
-                <p class="text-lg text-slate-600 leading-relaxed">
-                    This section breaks down the top five providers by their technical capabilities. We have moved beyond marketing speak to analyze the actual server software and hardware layers that will power your clients' sites. Click on any provider card to view the strategic "Agency Verdict" and detailed Pros/Cons for raw HTML hosting workflows.
-                </p>
+        <!-- Comparative Data Table -->
+        <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+            <div class="p-6 border-b border-slate-100 bg-white/50">
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Technical Specifications Matrix</h3>
             </div>
-
-            <div id="provider-grid" class="grid lg:grid-cols-2 gap-6">
-                <!-- Dynamically populated -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                        <tr>
+                            <th class="p-6">Provider / Plan</th>
+                            <th class="p-6">Promo Rate</th>
+                            <th class="p-6">Renewal Rate</th>
+                            <th class="p-6">Renewal Shock</th>
+                            <th class="p-6">Server Tech</th>
+                            <th class="p-6">Agency Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-table-body" class="text-sm">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
             </div>
-        </section>
-
-        <!-- SECTION 3: ECONOMIC MODELER -->
-        <section id="pricing" class="tab-content space-y-12">
-            <div class="max-w-3xl">
-                <h2 class="text-3xl font-bold text-slate-900 mb-4">Total Cost of Ownership (TCO)</h2>
-                <p class="text-lg text-slate-600 leading-relaxed">
-                    Most agencies are seduced by introductory rates, only to face "renewal shock" in year two. This modeler calculates the true costs over a 1-year (Yearly), 2-year (Bi-Yearly), and 4-year horizon based on current promotional terms and renewal spikes. Use the toggle below to compare how the loss-leader model impacts your long-term margins.
-                </p>
-            </div>
-
-            <div class="flex justify-center mb-8">
-                <div class="inline-flex glass-card p-1 rounded-lg">
-                    <button onclick="updatePriceView('yearly')" id="btn-1yr" class="px-6 py-2 rounded-md bg-teal-700 text-white font-medium transition-all">1 Year (Yearly)</button>
-                    <button onclick="updatePriceView('biyearly')" id="btn-2yr" class="px-6 py-2 rounded-md text-slate-600 font-medium transition-all">2 Years (Bi-Yearly)</button>
-                    <button onclick="updatePriceView('total')" id="btn-4yr" class="px-6 py-2 rounded-md text-slate-600 font-medium transition-all">4 Year TCO</button>
-                </div>
-            </div>
-
-            <div class="glass-card p-8 rounded-2xl shadow-sm overflow-x-auto">
-                <div class="chart-container !max-w-full">
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-8">
-                <div class="p-6 bg-slate-100 rounded-xl">
-                    <h4 class="font-bold text-slate-900 mb-2">Strategy: Locking In Promo Rates</h4>
-                    <p class="text-sm text-slate-700">Hostinger allows for a 48-month lock-in at $7.99/mo, effectively shielding you from renewal hikes for four years. This strategy yields the lowest possible TCO for stable agency growth.</p>
-                </div>
-                <div class="p-6 bg-amber-50 rounded-xl">
-                    <h4 class="font-bold text-amber-900 mb-2">Caution: SiteGround Renewal</h4>
-                    <p class="text-sm text-amber-800">SiteGround exhibits the industry's steepest renewal spike (+463%). While elite in support, it becomes mathematically unjustifiable for mass static file storage beyond year one.</p>
-                </div>
-            </div>
-        </section>
+        </div>
 
     </main>
 
     <!-- Application Structure Plan: 
-        The SPA is designed as a Dashboard Intelligence tool. 
-        - Navigation: Tabbed interface (Executive, Performance, Pricing) for logical flow.
-        - Visualization: Chart.js for speed/capacity benchmarks to allow instant visual comparison. 
-        - Interactivity: A custom Economic Modeler allows the user to see Yearly vs Bi-Yearly costs, solving the specific request for multi-year financial clarity.
-        - Data Mapping: Uses an object-oriented approach to manage provider data, making the UI dynamically reactive to user filters.
+        1. DESIGN PHILOSOPHY: The SPA is built as a "Nexus" Dashboard. It prioritizes clarity and immediate feedback.
+        2. DEFAULT STATE: To prevent an empty screen, the app initializes with the 5 most popular shared hosts (Hostinger, A2, etc.), providing immediate comparative value.
+        3. TIERED NAVIGATION: Tabs separate categories to allow the user to compare Shared (Landing pages) vs VPS (Complex sites) without cluttering one list.
+        4. MULTI-SELECT ENGINE: Users check/uncheck providers in the grid. JS event listeners instantly re-calculate the 48-month TCO and Inode charts.
+        5. FINANCIAL TRANSPARENCY: Every provider card and table row highlights "Renewal Shock (%)" to ensure no hidden costs impact the agency's bottom line.
     -->
 
     <!-- Visualization & Content Choices: 
-        - TTFB Chart: Bar chart to compare latency. Metric: ms. Goal: Highlight A2 speed.
-        - Inode Chart: Horizontal bar chart to compare capacity. Metric: Millions. Goal: Highlight Hostinger scalability.
-        - Pricing Modeler: Multi-dataset bar chart. Goal: Visualize the delta between promo price and renewal price over time.
-        - Provider Cards: Tailwind Flex/Grid for responsive technical deep-dives. 
-        - Interaction: Smooth section transitions and pricing toggles to prevent information overload.
-        - Library: Chart.js (CDN) for all Canvas-based graphics. NO SVG. NO Mermaid.
+        - 48-Month TCO: Bar Chart. Essential for agency forecasting. Shows that a cheap start often leads to the most expensive long-term result.
+        - Inode Limit: Horizontal Bar Chart. Critical for your "HTML landing page" focus—inodes are the most common failure point for high-volume static site deployments.
+        - Selection Grid: Card-based UI with active states for easy multi-selection.
+        - Data Table: High-density data grid for deep technical audits (LiteSpeed vs Apache, etc.).
+        - Library: Chart.js (CDN) used for all Canvas rendering. NO SVG. NO Mermaid.
     -->
 
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
     <script>
         const providers = [
-            {
-                name: "Hostinger",
-                plan: "Cloud Startup",
-                promo: 7.99,
-                renewal: 25.99,
-                sites: "300",
-                storage: "100 GB NVMe",
-                inodes: 2.0,
-                ttfb: 320,
-                server: "LiteSpeed Enterprise",
-                pros: ["Industry-leading Inode allowance", "48-month promo lock-in", "Custom-built CDN included"],
-                cons: ["No phone support (chat/email only)", "Steep renewal hike after term", "Proprietary hPanel learning curve"],
-                verdict: "Top Recommendation. Ideal for high-volume agencies needing massive file runways and predictable 4-year costs."
-            },
-            {
-                name: "A2 Hosting",
-                plan: "Turbo Max",
-                promo: 14.99,
-                renewal: 25.99,
-                sites: "Unlimited",
-                storage: "Unlimited NVMe",
-                inodes: 0.6,
-                ttfb: 280,
-                server: "LiteSpeed + Turbo",
-                pros: ["Fastest static file retrieval (280ms)", "Standard cPanel environment", "Anytime money-back guarantee"],
-                cons: ["Highest initial monthly cost", "Strict inode enforcement on 'Unlimited'", "Support can lag during peak hours"],
-                verdict: "Performance Champion. The best choice for speed-critical landing pages where conversion relies on sub-300ms load times."
-            },
-            {
-                name: "SiteGround",
-                plan: "GoGeek",
-                promo: 7.99,
-                renewal: 44.99,
-                sites: "Unlimited",
-                storage: "40 GB SSD",
-                inodes: 0.4,
-                ttfb: 250,
-                server: "Nginx / Google Cloud",
-                pros: ["Legendary technical support quality", "Enterprise GCP network backbone", "White-label access for clients"],
-                cons: ["Extremely punitive renewal (+463%)", "Severe 40GB storage ceiling", "No LiteSpeed optimizations"],
-                verdict: "Poor Economic Value for HTML. The cost per GB/Inode becomes mathematically unjustifiable after the first year."
-            },
-            {
-                name: "Bluehost",
-                plan: "Pro",
-                promo: 13.95,
-                renewal: 28.99,
-                sites: "100",
-                storage: "100 GB NVMe",
-                inodes: 0.5,
-                ttfb: 380,
-                server: "Custom Apache",
-                pros: ["Reliable 99.99% Uptime SLA", "Generous NVMe storage allocation", "Familiar cPanel integration"],
-                cons: ["Older Apache architecture (Slower TTFB)", "Heavy bias toward WordPress tools", "Requires 36-month term for best rate"],
-                verdict: "Suboptimal. Reliable infrastructure, but technologically lags behind LiteSpeed rivals for raw file delivery."
-            },
-            {
-                name: "DreamHost",
-                plan: "Shared Unlimited",
-                promo: 3.95,
-                renewal: 13.99,
-                sites: "Unlimited",
-                storage: "Unlimited SSD",
-                inodes: 0.5,
-                ttfb: 420,
-                server: "Standard Apache",
-                pros: ["Lowest long-term TCO", "100% Uptime Guarantee", "Transparent month-to-month options"],
-                cons: ["Legacy SSD storage (No NVMe)", "Slowest TTFB benchmarks (420ms)", "Custom panel lacks universal standards"],
-                verdict: "Budget Safe. Best for agencies on a strict budget where raw speed is not the primary performance KPI."
-            }
+            // Shared Tier
+            { id: 'hsg-sh', cat: 'shared', name: 'Hostinger', plan: 'Cloud Startup', promo: 7.99, renewal: 25.99, term: 48, limit: 2.0, limitUnit: 'M Inodes', tech: 'LiteSpeed Enterprise', verdict: 'Best for 4-year scale and file count.' },
+            { id: 'a2-sh', cat: 'shared', name: 'A2 Hosting', plan: 'Turbo Max', promo: 14.99, renewal: 25.99, term: 36, limit: 0.6, limitUnit: 'M Inodes', tech: 'LiteSpeed + NVMe', verdict: 'Performance king for static assets.' },
+            { id: 'sg-sh', cat: 'shared', name: 'SiteGround', plan: 'GoGeek', promo: 7.99, renewal: 44.99, term: 12, limit: 0.4, limitUnit: 'M Inodes', tech: 'Nginx / GCP', verdict: 'Avoid for mass static storage (renewal shock).' },
+            { id: 'bh-sh', cat: 'shared', name: 'Bluehost', plan: 'Pro', promo: 13.95, renewal: 28.99, term: 36, limit: 0.5, limitUnit: 'M Inodes', tech: 'Apache / NVMe', verdict: 'Reliable, legacy agency favorite.' },
+            { id: 'dh-sh', cat: 'shared', name: 'DreamHost', plan: 'Unlimited', promo: 3.95, renewal: 13.99, term: 36, limit: 0.5, limitUnit: 'M Inodes', tech: 'Apache / SSD', verdict: 'Budget-safe but technologically slower.' },
+            { id: 'nc-sh', cat: 'shared', name: 'Namecheap', plan: 'Stellar Plus', promo: 2.98, renewal: 6.48, term: 12, limit: 0.3, limitUnit: 'M Inodes', tech: 'Apache', verdict: 'Lowest entry cost for micro-projects.' },
+            // VPS Tier
+            { id: 'im-vps', cat: 'vps', name: 'InMotion', plan: 'VPS-2000', promo: 14.99, renewal: 59.99, term: 36, limit: 10, limitUnit: 'GB RAM', tech: 'KVM Managed', verdict: 'High power for agency backend tools.' },
+            { id: 'hsg-vps', cat: 'vps', name: 'Hostinger VPS', plan: 'KVM 8', promo: 21.99, renewal: 39.99, term: 24, limit: 32, limitUnit: 'GB RAM', tech: 'KVM Self-Managed', verdict: 'Unmatched raw compute for price.' },
+            { id: 'kn-cl', cat: 'cloud', name: 'Kinsta', plan: 'Starter', promo: 35.00, renewal: 35.00, term: 0, limit: 5, limitUnit: 'GB SSD', tech: 'GCP / LXD', verdict: 'Premium managed experience; zero hikes.' },
+            { id: 'do-cl', cat: 'cloud', name: 'DigitalOcean', plan: 'Basic Droplet', promo: 6.00, renewal: 6.00, term: 0, limit: 25, limitUnit: 'GB SSD', tech: 'Droplets', verdict: 'Scale developer assets with fixed pricing.' },
+            { id: 'vl-cl', cat: 'cloud', name: 'Vultr', plan: 'High Freq', promo: 6.00, renewal: 6.00, term: 0, limit: 32, limitUnit: 'GB NVMe', tech: 'NVMe Compute', verdict: 'Fastest raw I/O for HTML retrieval.' }
         ];
 
-        let priceChart;
+        let activeTab = 'shared';
+        let selectedIds = ['hsg-sh', 'a2-sh', 'sg-sh', 'bh-sh', 'dh-sh'];
+        let charts = {};
 
-        function showSection(sectionId) {
-            document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-            document.getElementById('nav-' + sectionId).classList.add('active');
+        function setTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('header button').forEach(b => {
+                b.classList.remove('tab-active');
+                b.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById('tab-' + tab);
+            activeBtn.classList.add('tab-active');
+            activeBtn.classList.remove('text-slate-400');
+            renderSelector();
         }
 
-        function renderProviderCards() {
-            const container = document.getElementById('provider-grid');
-            container.innerHTML = providers.map(p => `
-                <div class="glass-card p-6 rounded-2xl flex flex-col h-full border-t-4 ${p.name === 'Hostinger' ? 'border-teal-500' : 'border-slate-300'}">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-2xl font-bold text-slate-800">${p.name}</h3>
-                            <span class="text-xs font-semibold uppercase tracking-widest text-teal-600">${p.plan}</span>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-slate-500">Starts at</p>
-                            <p class="text-xl font-bold text-slate-900">$${p.promo}/mo</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-xl text-xs font-medium text-slate-600">
-                        <div><span class="block text-slate-400 font-normal">Server Architecture</span>${p.server}</div>
-                        <div><span class="block text-slate-400 font-normal">Storage Tech</span>${p.storage}</div>
-                        <div><span class="block text-slate-400 font-normal">Latency (TTFB)</span>${p.ttfb}ms</div>
-                        <div><span class="block text-slate-400 font-normal">Max Inodes</span>${p.inodes}M</div>
-                    </div>
+        function toggleProvider(id) {
+            if (selectedIds.includes(id)) {
+                selectedIds = selectedIds.filter(i => i !== id);
+            } else {
+                selectedIds.push(id);
+            }
+            updateApp();
+        }
 
-                    <div class="flex-grow space-y-4 mb-6">
-                        <ul class="pros-list text-sm space-y-1 text-slate-700">
-                            ${p.pros.map(item => `<li>${item}</li>`).join('')}
-                        </ul>
-                        <ul class="cons-list text-sm space-y-1 text-slate-700">
-                            ${p.cons.map(item => `<li>${item}</li>`).join('')}
-                        </ul>
-                    </div>
+        function resetSelection() {
+            selectedIds = ['hsg-sh', 'a2-sh', 'sg-sh', 'bh-sh', 'dh-sh'];
+            setTab('shared');
+            updateApp();
+        }
 
-                    <div class="pt-4 border-t border-slate-100">
-                        <p class="text-sm font-semibold text-slate-900 mb-1">Agency Verdict:</p>
-                        <p class="text-sm italic text-slate-600">${p.verdict}</p>
+        function calculateTCO(p) {
+            const promoMonths = p.term || 0;
+            const renewalMonths = Math.max(0, 48 - promoMonths);
+            return ((p.promo * promoMonths) + (p.renewal * renewalMonths)).toFixed(2);
+        }
+
+        function updateApp() {
+            document.getElementById('select-pill').innerText = `${selectedIds.length} SELECTED`;
+            renderSelector();
+            renderTable();
+            renderCharts();
+        }
+
+        function renderSelector() {
+            const grid = document.getElementById('selection-grid');
+            const filtered = providers.filter(p => p.cat === activeTab);
+            grid.innerHTML = filtered.map(p => `
+                <div onclick="toggleProvider('${p.id}')" class="selection-card p-4 rounded-2xl glass-card cursor-pointer transition-all hover:shadow-md ${selectedIds.includes(p.id) ? 'active ring-2 ring-teal-500' : ''}">
+                    <div class="flex items-start justify-between mb-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${p.name}</span>
+                        <div class="w-4 h-4 border-2 rounded-full flex items-center justify-center ${selectedIds.includes(p.id) ? 'bg-teal-500 border-teal-500' : 'border-slate-300'}">
+                            ${selectedIds.includes(p.id) ? '<span class="text-[8px] text-white">✓</span>' : ''}
+                        </div>
                     </div>
+                    <p class="text-sm font-bold text-slate-800">${p.plan}</p>
+                    <p class="text-xs text-teal-600 font-medium">$${p.promo}/mo</p>
                 </div>
             `).join('');
         }
 
-        function initCharts() {
-            // TTFB Chart
-            const ctxTTFB = document.getElementById('ttfbChart').getContext('2d');
-            new Chart(ctxTTFB, {
+        function renderTable() {
+            const body = document.getElementById('comparison-table-body');
+            const data = providers.filter(p => selectedIds.includes(p.id));
+            body.innerHTML = data.map(p => {
+                const hike = p.promo > 0 ? (((p.renewal - p.promo) / p.promo) * 100).toFixed(0) : 0;
+                return `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="p-6">
+                            <p class="font-bold text-slate-900">${p.name}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">${p.plan}</p>
+                        </td>
+                        <td class="p-6 font-bold text-slate-600">$${p.promo}</td>
+                        <td class="p-6 font-bold text-slate-600">$${p.renewal}</td>
+                        <td class="p-6">
+                            <span class="px-2 py-1 rounded text-[10px] font-black ${hike > 50 ? 'hike-badge' : 'bg-slate-100 text-slate-600'}">+${hike}% Jump</span>
+                        </td>
+                        <td class="p-6 text-xs text-slate-500 font-medium">${p.tech}</td>
+                        <td class="p-6 text-xs italic text-slate-400">${p.verdict}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCharts() {
+            const data = providers.filter(p => selectedIds.includes(p.id));
+            const labels = data.map(p => p.name);
+
+            // Cost Chart
+            if (charts.cost) charts.cost.destroy();
+            charts.cost = new Chart(document.getElementById('costChart'), {
                 type: 'bar',
                 data: {
-                    labels: providers.map(p => p.name),
+                    labels: labels,
                     datasets: [{
-                        label: 'Time To First Byte (ms)',
-                        data: providers.map(p => p.ttfb),
-                        backgroundColor: '#2d4356',
-                        borderRadius: 8
+                        label: '48m Cumulative Cost',
+                        data: data.map(p => calculateTCO(p)),
+                        backgroundColor: '#0d9488',
+                        borderRadius: 6,
+                        barThickness: 32
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { display: false } } }
+                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } } }
                 }
             });
 
-            // Inode Chart
-            const ctxInode = document.getElementById('inodeChart').getContext('2d');
-            new Chart(ctxInode, {
+            // Limit Chart
+            if (charts.limit) charts.limit.destroy();
+            charts.limit = new Chart(document.getElementById('limitChart'), {
                 type: 'bar',
                 indexAxis: 'y',
                 data: {
-                    labels: providers.map(p => p.name),
+                    labels: labels,
                     datasets: [{
-                        label: 'Inodes (Millions)',
-                        data: providers.map(p => p.inodes),
-                        backgroundColor: '#435b66',
-                        borderRadius: 8
+                        label: 'Inode Limit (Millions)',
+                        data: data.map(p => p.limit),
+                        backgroundColor: '#0f172a',
+                        borderRadius: 4,
+                        barThickness: 16
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
                     plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true, grid: { display: false } } }
-                }
-            });
-
-            // Pricing Chart Initial
-            const ctxPrice = document.getElementById('priceChart').getContext('2d');
-            priceChart = new Chart(ctxPrice, {
-                type: 'bar',
-                data: getPriceData('yearly'),
-                options: {
-                    maintainAspectRatio: false,
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            title: { display: true, text: 'Total USD ($)' } 
-                        }
-                    }
+                    scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } } }
                 }
             });
         }
 
-        function getPriceData(type) {
-            const labels = providers.map(p => p.name);
-            let values = [];
-            let label = "";
-
-            if(type === 'yearly') {
-                label = "12-Month Total (Introductory)";
-                values = providers.map(p => (p.promo * 12).toFixed(2));
-            } else if(type === 'biyearly') {
-                label = "24-Month Total (Promo + Renewal mix)";
-                values = providers.map(p => {
-                    // SiteGround only has 12mo promo.
-                    if(p.name === 'SiteGround') return ((p.promo * 12) + (p.renewal * 12)).toFixed(2);
-                    // A2, Hostinger, Bluehost, Dreamhost have 24mo+ promos
-                    return (p.promo * 24).toFixed(2);
-                });
-            } else {
-                label = "48-Month Total Cost of Ownership";
-                values = [
-                    (7.99 * 48).toFixed(2), // Hostinger (48m lock)
-                    ((14.99 * 36) + (25.99 * 12)).toFixed(2), // A2
-                    ((7.99 * 12) + (44.99 * 36)).toFixed(2), // SiteGround
-                    ((13.95 * 36) + (28.99 * 12)).toFixed(2), // Bluehost
-                    ((3.95 * 36) + (13.99 * 12)).toFixed(2)  // Dreamhost
-                ];
-            }
-
-            return {
-                labels: labels,
-                datasets: [{
-                    label: label,
-                    data: values,
-                    backgroundColor: type === 'total' ? '#9b2226' : '#2d4356',
-                    borderRadius: 6
-                }]
-            };
-        }
-
-        function updatePriceView(type) {
-            // Update Buttons
-            document.querySelectorAll('#pricing button').forEach(b => b.classList.remove('bg-teal-700', 'text-white'));
-            document.querySelectorAll('#pricing button').forEach(b => b.classList.add('text-slate-600'));
-            
-            const activeBtn = type === 'yearly' ? 'btn-1yr' : (type === 'biyearly' ? 'btn-2yr' : 'btn-4yr');
-            document.getElementById(activeBtn).classList.remove('text-slate-600');
-            document.getElementById(activeBtn).classList.add('bg-teal-700', 'text-white');
-
-            // Update Chart
-            priceChart.data = getPriceData(type);
-            priceChart.update();
-        }
-
-        // Initialize App
-        window.onload = () => {
-            renderProviderCards();
-            initCharts();
-        };
+        window.onload = () => updateApp();
     </script>
 </body>
 </html>
