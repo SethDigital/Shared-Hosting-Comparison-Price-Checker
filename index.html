@@ -1,341 +1,1038 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgencyHost Nexus | Infrastructure Intelligence</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chosen Palette: Sandstone & Slate - A professional, warm neutral palette with deep teal for primary actions and rose-slate for financial warnings. -->
-    <style>
-        :root {
-            --bg-main: #fdfcfb;
-            --accent-primary: #0f172a;
-            --accent-teal: #0d9488;
-            --accent-rose: #e11d48;
-            --text-slate: #334155;
-            --card-border: #e2e8f0;
-        }
-        body { background-color: var(--bg-main); color: var(--text-slate); font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid var(--card-border); }
-        .tab-active { border-bottom: 3px solid var(--accent-teal); color: var(--accent-teal); font-weight: 800; }
-        .chart-container { position: relative; width: 100%; max-width: 100%; height: 320px; max-height: 400px; margin: 0 auto; }
-        .hike-badge { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-        .selection-card.active { border-color: var(--accent-teal); background-color: #f0fdfa; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgencyHost Nexus | Hosting Price Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  /* ---- Theme tokens (dataviz reference palette) ---- */
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink-1: #0b0b0b;
+    --ink-2: #52514e;
+    --ink-3: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --hairline: rgba(11,11,11,0.10);
+    --accent: #2a78d6;          /* series-1 blue */
+    --accent-soft: rgba(42,120,214,0.10);
+    --seq-light: #86b6ef;       /* blue-250: intro-period */
+    --seq-dark: #1c5cab;        /* blue-550: renewal-period */
+    --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300;
+    --s5:#4a3aa7; --s6:#e34948; --s7:#e87ba4; --s8:#eb6834;
+    --good: #0ca30c;  --good-deep:#006300;
+    --warn: #fab219;  --warn-deep:#8a5b00;
+    --crit: #d03b3b;  --crit-deep:#a02020;
+    --good-bg: rgba(12,163,12,0.10);
+    --warn-bg: rgba(250,178,25,0.14);
+    --crit-bg: rgba(208,59,59,0.10);
+    --neutral-bg: rgba(11,11,11,0.05);
+    --tooltip-bg: #0b0b0b;
+    --tooltip-ink: #ffffff;
+  }
+  html[data-theme="dark"] {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-3: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --hairline: rgba(255,255,255,0.10);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.16);
+    --seq-light: #86b6ef;
+    --seq-dark: #2a78d6;
+    --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300;
+    --s5:#9085e9; --s6:#e66767; --s7:#d55181; --s8:#d95926;
+    --good-deep:#0ca30c;
+    --warn-deep:#fab219;
+    --crit-deep:#e66767;
+    --good-bg: rgba(12,163,12,0.16);
+    --warn-bg: rgba(250,178,25,0.14);
+    --crit-bg: rgba(208,59,59,0.18);
+    --neutral-bg: rgba(255,255,255,0.07);
+    --tooltip-bg: #fcfcfb;
+    --tooltip-ink: #0b0b0b;
+  }
+  body {
+    background: var(--page);
+    color: var(--ink-2);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    scroll-behavior: smooth;
+  }
+  .card { background: var(--surface); border: 1px solid var(--hairline); }
+  .ink1 { color: var(--ink-1); }
+  .ink2 { color: var(--ink-2); }
+  .ink3 { color: var(--ink-3); }
+  .num { font-variant-numeric: tabular-nums; }
+  .hairline-b { border-bottom: 1px solid var(--hairline); }
+  .hairline-t { border-top: 1px solid var(--hairline); }
+
+  .pill {
+    border: 1px solid var(--hairline); color: var(--ink-2); background: var(--surface);
+    border-radius: 9999px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .chart-tab {
+    border: 1px solid var(--hairline); background: var(--surface); color: var(--ink-2);
+    border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .chart-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .chart-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  .badge { display:inline-flex; align-items:center; gap:4px; border-radius:6px;
+    padding:2px 8px; font-size:10px; font-weight:800; letter-spacing:.02em; white-space:nowrap; }
+  .badge-flat      { color: var(--good-deep); background: var(--good-bg); }
+  .badge-moderate  { color: var(--ink-2);     background: var(--neutral-bg); }
+  .badge-steep     { color: var(--warn-deep); background: var(--warn-bg); }
+  .badge-predatory { color: var(--crit-deep); background: var(--crit-bg); }
+  .badge-eco       { color: var(--good-deep); background: var(--good-bg); }
+  .badge-pick      { color: var(--accent);    background: var(--accent-soft); }
+
+  .provider-card { cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .15s; border-radius: 16px; }
+  .provider-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-1px); }
+  .provider-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+  .btn-ghost { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+  .btn-detail {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    border: 1px solid var(--hairline); border-radius: 8px; padding: 4px 10px; cursor: pointer;
+  }
+  .btn-detail:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--accent); }
+
+  .search-input {
+    background: var(--surface); border: 1px solid var(--hairline); color: var(--ink-1);
+    border-radius: 10px; padding: 8px 14px; font-size: 13px; width: 100%; max-width: 280px;
+  }
+  .search-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); }
+  .provider-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .kpi-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--baseline); border-radius: 4px; }
+</style>
 </head>
 <body class="min-h-screen pb-24">
 
-    <!-- Header & Navigation -->
-    <header class="sticky top-0 z-50 glass-card bg-white/90 border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xl italic">N</div>
-                <span class="text-xl font-bold tracking-tighter text-slate-800 uppercase italic">Agency<span class="text-teal-600 not-italic font-black">Nexus</span></span>
-            </div>
-            <div class="hidden md:flex space-x-2">
-                <button onclick="setTab('shared')" id="tab-shared" class="tab-active px-4 py-5 text-xs uppercase tracking-[0.15em] transition-all">Shared / Economy</button>
-                <button onclick="setTab('vps')" id="tab-vps" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">VPS & Dedicated</button>
-                <button onclick="setTab('cloud')" id="tab-cloud" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">Cloud & Managed</button>
-            </div>
-            <div class="flex items-center">
-                <span id="select-pill" class="bg-teal-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-teal-100 uppercase">0 Selected</span>
-            </div>
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 hairline-b" style="background: color-mix(in srgb, var(--page) 88%, transparent); backdrop-filter: blur(10px);">
+  <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white font-black text-lg" style="background: var(--accent);">N</div>
+      <div>
+        <div class="text-base font-black tracking-tight ink1">AgencyHost <span style="color:var(--accent)">Nexus</span></div>
+        <div class="text-[10px] ink3 font-semibold tracking-widest uppercase -mt-0.5">Hosting Price Intelligence</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="select-pill" class="text-[10px] font-black px-3 py-1.5 rounded-full text-white num" style="background: var(--accent);">0 SELECTED</span>
+      <button id="theme-toggle" onclick="toggleTheme()" class="w-9 h-9 rounded-lg card flex items-center justify-center text-base" title="Toggle light/dark">🌙</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- ============ INTRO ============ -->
+  <div class="max-w-4xl mb-8">
+    <h1 class="text-4xl md:text-5xl font-black ink1 mb-4 tracking-tight leading-tight">Every major host. Real renewal math.</h1>
+    <p class="text-base leading-relaxed ink2 max-w-3xl">
+      Compare <strong class="ink1"><span id="provider-count">50</span>+ hosting providers</strong> across shared, VPS, managed WordPress, and hyperscale cloud tiers.
+      Advertised <em>introductory</em> pricing is tracked as its own metric alongside the renewal rate you'll actually pay —
+      and plans whose renewal jumps ≥100% (and ≥$5/mo) over the teaser rate are flagged as
+      <span class="badge badge-predatory">⚠ Predatory intro</span> so you're never surprised at invoice two.
+    </p>
+  </div>
+
+  <!-- ============ KPI ROW ============ -->
+  <div id="kpi-row" class="kpi-grid mb-8"></div>
+
+  <!-- ============ PREDATORY ALERT ============ -->
+  <div id="predatory-alert" class="hidden mb-8 rounded-2xl p-5" style="background: var(--crit-bg); border: 1px solid var(--crit);">
+    <div class="flex items-start gap-3">
+      <span class="text-xl leading-none mt-0.5">⚠</span>
+      <div>
+        <p class="font-black text-sm mb-1" style="color: var(--crit-deep);">Predatory introductory pricing detected in your selection</p>
+        <p class="text-xs ink2 leading-relaxed" id="predatory-alert-body"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CHARTS ============ -->
+  <section id="charts-section" class="mb-14 hidden">
+    <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="text-2xl font-black ink1 mb-1">Visual comparisons</h2>
+        <p class="text-sm ink3">Five views of the same selection — pick the one that speaks to you.</p>
+      </div>
+    </div>
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-1" id="chart-tabs">
+      <button class="chart-tab active" data-chart="timeline" onclick="setChart('timeline')">📈 Cost timeline</button>
+      <button class="chart-tab" data-chart="tco" onclick="setChart('tco')">💰 4-year TCO</button>
+      <button class="chart-tab" data-chart="introrenew" onclick="setChart('introrenew')">🏷 Intro vs renewal</button>
+      <button class="chart-tab" data-chart="shock" onclick="setChart('shock')">⚡ Renewal shock</button>
+      <button class="chart-tab" data-chart="storage" onclick="setChart('storage')">💾 Storage</button>
+    </div>
+    <div class="card rounded-3xl p-6 md:p-8">
+      <p id="chart-caption" class="text-xs ink3 mb-5 leading-relaxed max-w-3xl"></p>
+      <div id="chart-holder" style="position:relative; width:100%; height:420px;">
+        <canvas id="mainChart"></canvas>
+      </div>
+      <p id="chart-note" class="text-[11px] ink3 mt-4 hidden"></p>
+    </div>
+  </section>
+
+  <!-- ============ CATALOG ============ -->
+  <section class="mb-14">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+      <div>
+        <h2 class="text-2xl font-black ink1 mb-1">Provider catalog</h2>
+        <p class="text-sm ink3">Click a card to add it to the comparison. Click “Details” for the full profile.</p>
+      </div>
+      <div class="flex gap-4 items-center">
+        <button onclick="clearAll()" class="btn-ghost" style="color: var(--crit-deep);">Clear all</button>
+        <button onclick="resetToRecommended()" class="btn-ghost" style="color: var(--accent);">Agency picks</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4 items-center">
+      <input id="search" class="search-input" type="search" placeholder="Search hosts, plans, tech…" oninput="renderCatalog()">
+      <div class="flex gap-2 overflow-x-auto" id="cat-pills"></div>
+    </div>
+    <div id="selection-grid" class="provider-grid"></div>
+  </section>
+
+  <!-- ============ TABLE ============ -->
+  <section id="table-container" class="card rounded-3xl overflow-hidden hidden">
+    <div class="p-6 hairline-b flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h3 class="text-sm font-black ink1 uppercase tracking-widest">Full comparison matrix</h3>
+        <p class="text-[11px] ink3 mt-1">Intro price is its own column — never blended into averages. Click headers to sort.</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead class="text-[10px] font-black ink3 uppercase tracking-widest hairline-b">
+          <tr id="table-head"></tr>
+        </thead>
+        <tbody id="comparison-table-body" class="font-medium"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ EMPTY STATE ============ -->
+  <div id="empty-state" class="text-center py-20 card rounded-3xl" style="border-style: dashed; border-width: 2px;">
+    <p class="ink3 font-bold uppercase tracking-widest text-xs">Select providers above to activate the comparison engine</p>
+  </div>
+
+  <!-- ============ FOOTER / METHODOLOGY ============ -->
+  <footer class="mt-14 text-xs ink3 leading-relaxed max-w-4xl space-y-2">
+    <p><strong class="ink2">Methodology.</strong> TCO is normalized to a 48-month window: intro price × promo term, plus renewal price × remaining months. A plan is flagged <strong style="color:var(--crit-deep)">predatory</strong> when renewal is ≥100% above the intro rate <em>and</em> the jump is ≥$5/mo; 50–99% is <strong style="color:var(--warn-deep)">steep</strong>. Flat-priced plans (no teaser) are marked <strong style="color:var(--good-deep)">✓ flat</strong>.</p>
+    <p><strong class="ink2">Data.</strong> Pricing snapshot of public list prices, compiled July 2026. Promotional rates change weekly — always confirm on the provider's site before purchase. The catalog is data-driven: to add a host, append one entry to the <code>providers</code> array.</p>
+  </footer>
+</main>
+
+<!-- ============ DETAILS MODAL ============ -->
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" onclick="if(event.target===this) closeModal()">
+  <div class="card rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-8 relative">
+    <button onclick="closeModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full card flex items-center justify-center ink2 font-bold">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   DATASET — pricing snapshot (public list prices, compiled July 2026)
+   promo = advertised intro $/mo · renewal = post-term $/mo
+   term  = months the intro rate lasts (0 = flat pricing, no teaser)
+   storage in GB (null = usage-based/none listed; unmetered flag = no cap)
+===================================================================== */
+const providers = [
+  /* ---------- SHARED / ECONOMY ---------- */
+  { id:'hostinger-sh', cat:'shared', name:'Hostinger', plan:'Premium Shared', promo:2.99, renewal:11.99, term:48, storage:100, sites:'100 websites', tech:'LiteSpeed / NVMe', support:'24/7 live chat', mb:30, founded:2004, hq:'Kaunas, Lithuania', rec:true,
+    blurb:'Budget giant with a modern LiteSpeed + NVMe stack and one of the lowest entry prices anywhere — but the headline rate requires paying 48 months upfront.',
+    pros:['Extremely low entry price','Modern NVMe + LiteSpeed stack','Weekly backups included'],
+    cons:['Best price requires 4-year prepay','Renewal is ~4× the promo rate','No phone support'] },
+  { id:'bluehost-sh', cat:'shared', name:'Bluehost', plan:'Choice Plus', promo:5.45, renewal:26.99, term:12, storage:100, sites:'Unlimited', tech:'Apache / SSD', support:'24/7 phone + chat', mb:30, founded:2003, hq:'Orem, UT (Newfold)',
+    blurb:'WordPress.org-recommended veteran owned by Newfold Digital. Deep first-year discounts front-load all the savings into invoice one.',
+    pros:['Free domain first year','Guided WordPress onboarding','24/7 phone support'],
+    cons:['Renewal ~5× the promo rate','Upsell-heavy checkout','US datacenters only'] },
+  { id:'siteground-sh', cat:'shared', name:'SiteGround', plan:'GoGeek', promo:7.99, renewal:44.99, term:12, storage:40, sites:'Unlimited', tech:'Nginx on Google Cloud', support:'24/7 chat + tickets', mb:30, founded:2004, hq:'Sofia, Bulgaria',
+    blurb:'Premium shared host on Google Cloud with a stellar support reputation. Promo pricing applies to the first invoice only — renewals are among the steepest in the industry.',
+    pros:['Top-tier support reputation','Google Cloud infrastructure','Staging + Git built in'],
+    cons:['463% renewal hike','Only 40GB at this price','Aggressive CPU-seconds limits'] },
+  { id:'dreamhost-sh', cat:'shared', name:'DreamHost', plan:'Shared Unlimited', promo:3.95, renewal:13.99, term:36, storage:null, unmetered:true, sites:'Unlimited', tech:'Apache / SSD', support:'24/7 tickets, chat', mb:97, founded:1996, hq:'Los Angeles, CA',
+    blurb:'Employee-owned independent host since 1996 with an industry-best 97-day money-back guarantee and true month-to-month plans.',
+    pros:['97-day money-back guarantee','Month-to-month billing available','Unmetered storage'],
+    cons:['Big jump after the 3-year term','Custom panel instead of cPanel','Phone support is callback-only'] },
+  { id:'hostgator-sh', cat:'shared', name:'HostGator', plan:'Baby', promo:3.75, renewal:14.95, term:36, storage:null, unmetered:true, sites:'Unlimited', tech:'Apache / SSD', support:'24/7 phone + chat', mb:30, founded:2002, hq:'Houston, TX (Newfold)',
+    blurb:'Mass-market Newfold brand known for cheap unmetered starter plans. Fine for simple sites; renewal jumps sharply after the promo term.',
+    pros:['Unmetered storage & bandwidth','24/7 phone support','Frequent flash sales'],
+    cons:['~300% renewal hike','Dated performance stack','Backups cost extra'] },
+  { id:'godaddy-sh', cat:'shared', name:'GoDaddy', plan:'Deluxe', promo:7.99, renewal:14.99, term:36, storage:75, sites:'10 websites', tech:'Apache / SSD', support:'24/7 phone', mb:30, founded:1997, hq:'Tempe, AZ',
+    blurb:'The world’s largest domain registrar, bundling hosting into its ecosystem. Convenient if your domains already live there; expect constant cross-selling.',
+    pros:['Everything in one account','Massive support operation','Free domain first year'],
+    cons:['Relentless upsells','Middling performance for price','Email costs extra after year one'] },
+  { id:'namecheap-sh', cat:'shared', name:'Namecheap', plan:'Stellar Plus', promo:2.98, renewal:6.48, term:12, storage:null, unmetered:true, sites:'Unlimited', tech:'LiteSpeed / SSD', support:'24/7 live chat', mb:30, founded:2000, hq:'Phoenix, AZ', rec:true,
+    blurb:'Registrar-first company with genuinely cheap hosting and one of the smallest renewal steps in the economy tier — the anti-predatory budget pick.',
+    pros:['Cheap even at renewal','Unmetered SSD storage','Free automatic backups'],
+    cons:['Modest server performance','Datacenter choice is limited','Support is chat/ticket only'] },
+  { id:'a2-sh', cat:'shared', name:'A2 Hosting', plan:'Turbo Boost', promo:6.99, renewal:20.99, term:36, storage:null, unmetered:true, sites:'Unlimited', tech:'LiteSpeed Turbo / NVMe', support:'24/7 phone + chat', mb:30, founded:2001, hq:'Ann Arbor, MI',
+    blurb:'Developer-friendly host whose Turbo tier (LiteSpeed + NVMe) genuinely benchmarks faster than typical shared hosting. Anytime prorated money-back policy.',
+    pros:['Turbo servers are legitimately fast','Anytime prorated refunds','Dev-friendly (SSH, multiple PHP)'],
+    cons:['200% renewal hike','Turbo features locked to top tiers','Upsells during checkout'] },
+  { id:'greengeeks-sh', cat:'shared', name:'GreenGeeks', plan:'Pro', promo:4.95, renewal:19.95, term:36, storage:null, unmetered:true, sites:'Unlimited', tech:'LiteSpeed / SSD', support:'24/7 chat', mb:30, founded:2008, hq:'Los Angeles, CA', eco:true,
+    blurb:'The best-known eco host — purchases wind energy credits at 3× its actual consumption. Solid LiteSpeed performance under the green banner.',
+    pros:['300% renewable energy match','LiteSpeed caching included','Free nightly backups'],
+    cons:['~300% renewal hike','Single-brand ecosystem lock-in','No phone support'] },
+  { id:'interserver-sh', cat:'shared', name:'InterServer', plan:'Standard', promo:2.50, renewal:7.00, term:12, storage:null, unmetered:true, sites:'Unlimited', tech:'LiteSpeed / SSD', support:'24/7 phone + chat', mb:30, founded:1999, hq:'Secaucus, NJ', rec:true,
+    blurb:'Runs its own New Jersey datacenter and offers a price-lock guarantee: the rate you renew at never increases while you stay subscribed.',
+    pros:['Price-lock guarantee','Month-to-month friendly','Owns its own datacenter'],
+    cons:['Single US location','Plainer control panel experience','Less polished onboarding'] },
+  { id:'fastcomet-sh', cat:'shared', name:'FastComet', plan:'FastCloud Extra', promo:5.95, renewal:19.95, term:12, storage:35, sites:'Unlimited', tech:'LiteSpeed / NVMe', support:'24/7 chat + tickets', mb:45, founded:2013, hq:'San Francisco, CA',
+    blurb:'Cloud-SSD shared host with 11 global datacenters and a reputation for hands-on support. 45-day money-back window.',
+    pros:['11 datacenter locations','45-day money-back','Free daily backups'],
+    cons:['235% renewal hike','35GB cap at this tier','Renewal applies after just 12 months'] },
+  { id:'scala-sh', cat:'shared', name:'ScalaHosting', plan:'Start', promo:2.95, renewal:13.95, term:36, storage:20, sites:'1 website', tech:'SPanel / NVMe', support:'24/7 chat + tickets', mb:30, founded:2007, hq:'Dallas, TX',
+    blurb:'Innovator behind SPanel (a cPanel alternative with no per-account fees). Shared plans are the on-ramp to its well-regarded managed VPS line.',
+    pros:['SPanel: no cPanel license fees','Free daily backups','Anytime refunds (unused portion)'],
+    cons:['373% renewal hike','Entry plan is single-site','Smaller community/documentation'] },
+  { id:'hostwinds-sh', cat:'shared', name:'Hostwinds', plan:'Basic', promo:5.24, renewal:8.99, term:36, storage:null, unmetered:true, sites:'1 website', tech:'LiteSpeed / SSD', support:'24/7 live chat', mb:30, founded:2010, hq:'Seattle, WA',
+    blurb:'No-frills host with honest, mild renewal steps and unmetered plans. Better known for its flexible VPS line.',
+    pros:['Mild renewal increase','Unmetered storage & bandwidth','Instant setup'],
+    cons:['Entry plan is single-site','Basic feature set','Smaller support team'] },
+  { id:'ionos-sh', cat:'shared', name:'IONOS', plan:'Plus', promo:1.00, renewal:12.00, term:12, storage:null, unmetered:true, sites:'Unlimited', tech:'Apache / NVMe', support:'24/7 phone + personal advisor', mb:30, founded:1988, hq:'Montabaur, Germany',
+    blurb:'European giant (1&1) famous for its $1/month teaser year. The 1100% jump at month 13 is the textbook predatory intro — priced in here so you can see it coming.',
+    pros:['$1/mo first year is unbeatable','Assigned personal advisor','EU + US datacenters'],
+    cons:['1100% renewal hike','Dated control panel','Contract terms favor auto-renew'] },
+  { id:'chemicloud-sh', cat:'shared', name:'ChemiCloud', plan:'Pro', promo:3.98, renewal:15.95, term:36, storage:30, sites:'Unlimited', tech:'LiteSpeed / NVMe', support:'24/7 chat + tickets', mb:45, founded:2016, hq:'Wilmington, DE',
+    blurb:'Boutique host with standout support ratings and free lifetime domain on annual plans. A frequent “hidden gem” recommendation.',
+    pros:['Excellent support ratings','Free domain for life (annual+)','45-day money-back'],
+    cons:['301% renewal hike','Smaller company scale','No phone support'] },
+  { id:'hostarmada-sh', cat:'shared', name:'HostArmada', plan:'Web Warp', promo:4.11, renewal:16.95, term:36, storage:30, sites:'Unlimited', tech:'LiteSpeed / NVMe', support:'24/7 chat + phone', mb:45, founded:2019, hq:'Newark, DE',
+    blurb:'Young cloud-SSD host competing hard on support speed and free daily backups across 9 regions.',
+    pros:['Fast, praised support','Free daily backups (7 kept)','9 global regions'],
+    cons:['312% renewal hike','Founded 2019 — short track record','Resource limits on entry tiers'] },
+  { id:'inmotion-sh', cat:'shared', name:'InMotion', plan:'Power', promo:4.49, renewal:14.99, term:36, storage:100, sites:'50 websites', tech:'UltraStack / NVMe', support:'24/7 phone + chat', mb:90, founded:2001, hq:'Los Angeles, CA',
+    blurb:'Long-running independent host with US phone support and a 90-day money-back guarantee — one of the longest in shared hosting.',
+    pros:['90-day money-back','US-based phone support','Free site migration'],
+    cons:['234% renewal hike','Checkout pushes longer terms','Performance mid-pack'] },
+  { id:'hostpapa-sh', cat:'shared', name:'HostPapa', plan:'Business', promo:4.95, renewal:19.99, term:36, storage:null, unmetered:true, sites:'Unlimited', tech:'Apache / SSD', support:'24/7 phone + chat', mb:30, founded:2006, hq:'Burlington, ON, Canada', eco:true,
+    blurb:'Canadian green host (100% renewable energy) aimed at small businesses, with one-on-one onboarding sessions included.',
+    pros:['100% renewable-powered','Free 1-on-1 onboarding call','Unmetered storage'],
+    cons:['304% renewal hike','Middling speed benchmarks','Add-ons pushed at checkout'] },
+
+  /* ---------- VPS & DEDICATED ---------- */
+  { id:'do-vps', cat:'vps', name:'DigitalOcean', plan:'Basic Droplet 1GB', promo:6.00, renewal:6.00, term:0, storage:25, sites:'—', tech:'KVM / SSD', support:'Tickets + docs', mb:0, founded:2012, hq:'New York, NY', rec:true,
+    blurb:'The developer-cloud standard. Transparent flat pricing, superb documentation, and a huge ecosystem of one-click images.',
+    pros:['Flat, predictable pricing','Best-in-class documentation','Snapshots & backups on demand'],
+    cons:['Unmanaged — you run the box','Support is ticket-based','Bandwidth overages billed'] },
+  { id:'vultr-vps', cat:'vps', name:'Vultr', plan:'Cloud Compute 1GB', promo:6.00, renewal:6.00, term:0, storage:32, sites:'—', tech:'High Frequency / NVMe', support:'Tickets', mb:0, founded:2014, hq:'West Palm Beach, FL', rec:true,
+    blurb:'DigitalOcean’s closest rival with more global locations (30+) and high-frequency NVMe compute at the same flat price.',
+    pros:['30+ global locations','High-frequency NVMe options','Flat pricing, hourly billing'],
+    cons:['Unmanaged','Support quality varies','Anti-fraud can be strict on signup'] },
+  { id:'linode-vps', cat:'vps', name:'Akamai (Linode)', plan:'Shared 2GB', promo:12.00, renewal:12.00, term:0, storage:50, sites:'—', tech:'KVM / Akamai backbone', support:'24/7 phone + tickets', mb:0, founded:2003, hq:'Philadelphia, PA',
+    blurb:'The original indie VPS pioneer, now on Akamai’s backbone. Still one of the few clouds with free 24/7 human phone support.',
+    pros:['Free 24/7 phone support','Akamai network integration','20+ years of reliability'],
+    cons:['Pricier than DO/Vultr at entry','Fewer one-click apps','Enterprise focus creeping in'] },
+  { id:'hetzner-vps', cat:'vps', name:'Hetzner', plan:'CPX11', promo:4.85, renewal:4.85, term:0, storage:40, sites:'—', tech:'AMD EPYC / KVM', support:'Tickets', mb:0, founded:1997, hq:'Gunzenhausen, Germany', rec:true,
+    blurb:'The price-performance king of European hosting — 20TB of included traffic and AMD EPYC cores at prices US clouds can’t touch.',
+    pros:['Unmatched price/performance','20TB traffic included','GDPR-native EU infrastructure'],
+    cons:['US locations limited (VA/OR)','Strict identity verification','Ticket-only support'] },
+  { id:'ovh-vps', cat:'vps', name:'OVHcloud', plan:'VPS Value', promo:4.50, renewal:4.50, term:0, storage:40, sites:'—', tech:'KVM', support:'Tickets', mb:0, founded:1999, hq:'Roubaix, France',
+    blurb:'Europe’s largest hosting company with massive datacenter scale and anti-DDoS included on every VPS.',
+    pros:['Anti-DDoS included free','Very low flat pricing','Global datacenter footprint'],
+    cons:['Support is famously slow','Clunky control panel','Provisioning can lag'] },
+  { id:'contabo-vps', cat:'vps', name:'Contabo', plan:'Cloud VPS 10', promo:6.15, renewal:6.15, term:0, storage:150, sites:'—', tech:'KVM / NVMe+SSD', support:'Tickets (business hrs)', mb:0, founded:2003, hq:'Munich, Germany',
+    blurb:'Absurd specs-per-dollar (150GB+ storage at ~$6) — the tradeoff is contended resources, setup fees on monthly terms, and slower support.',
+    pros:['Huge storage & RAM per dollar','32TB bandwidth allowance','EU + US + Asia regions'],
+    cons:['Setup fee on monthly billing','Contended (oversold) resources','Slow support responses'] },
+  { id:'hostinger-vps', cat:'vps', name:'Hostinger VPS', plan:'KVM 2', promo:5.99, renewal:11.99, term:24, storage:100, sites:'—', tech:'KVM / NVMe', support:'24/7 live chat', mb:30, founded:2004, hq:'Kaunas, Lithuania',
+    blurb:'Cheap self-managed KVM slices with an AI assistant bolted on. Watch the renewal: the price doubles after the 24-month term.',
+    pros:['8GB RAM tier is cheap','NVMe storage standard','Simple template deploys'],
+    cons:['Price doubles at renewal','Self-managed only','No hourly billing'] },
+  { id:'kamatera-vps', cat:'vps', name:'Kamatera', plan:'2GB Cloud Server', promo:6.00, renewal:6.00, term:0, storage:20, sites:'—', tech:'Custom cloud / SSD', support:'24/7 phone + tickets', mb:0, founded:1995, hq:'New York, NY',
+    blurb:'Fully configurable cloud servers (pick exact vCPU/RAM/disk) with a 30-day free trial and 24/7 human support.',
+    pros:['Build-your-own server specs','30-day free trial','24/7 phone support'],
+    cons:['Managed support costs extra','Interface feels dated','Billing granularity is confusing'] },
+  { id:'upcloud-vps', cat:'vps', name:'UpCloud', plan:'1GB Plan', promo:7.00, renewal:7.00, term:0, storage:25, sites:'—', tech:'MaxIOPS storage', support:'24/7 chat + tickets', mb:0, founded:2012, hq:'Helsinki, Finland',
+    blurb:'Finnish developer cloud with proprietary MaxIOPS storage that consistently tops disk-performance benchmarks, plus a 100% uptime SLA.',
+    pros:['MaxIOPS: fastest disks in class','100% uptime SLA (50× credit)','Clean, fast control panel'],
+    cons:['Slightly pricier than rivals','Fewer ancillary services','Smaller community'] },
+  { id:'racknerd-vps', cat:'vps', name:'RackNerd', plan:'2.5GB KVM', promo:2.75, renewal:2.75, term:0, storage:45, sites:'—', tech:'KVM / SSD', support:'24/7 tickets', mb:0, founded:2019, hq:'City of Industry, CA',
+    blurb:'The budget-deal king — famous for holiday promos under $1.50/mo equivalent that renew at the same locked deal price forever.',
+    pros:['Deal prices lock for life','Multiple US locations','Solid uptime for the price'],
+    cons:['Deals are annual-prepay only','Bare-bones panel (SolusVM)','Young company (2019)'] },
+  { id:'hostwinds-vps', cat:'vps', name:'Hostwinds VPS', plan:'Unmanaged 1GB', promo:4.99, renewal:8.24, term:12, storage:30, sites:'—', tech:'KVM / SSD', support:'24/7 live chat', mb:30, founded:2010, hq:'Seattle, WA',
+    blurb:'Flexible VPS line with both managed and unmanaged flavors and hourly billing. Mild renewal step after year one.',
+    pros:['Managed option available','Hourly billing','Instant scaling'],
+    cons:['65% renewal increase','Only US + Amsterdam','Panel feels dated'] },
+  { id:'scala-vps', cat:'vps', name:'ScalaHosting VPS', plan:'Managed Build #1', promo:14.95, renewal:29.95, term:36, storage:50, sites:'—', tech:'SPanel managed / NVMe', support:'24/7 chat + tickets', mb:30, founded:2007, hq:'Dallas, TX',
+    blurb:'Fully managed VPS with SPanel included free — a real cPanel-license cost killer. Renewal doubles after the 3-year term.',
+    pros:['Fully managed at low cost','SPanel included (no license fees)','Free daily remote backups'],
+    cons:['Price doubles at renewal','SPanel ecosystem is smaller','Limited datacenter choice'] },
+  { id:'inmotion-vps', cat:'vps', name:'InMotion VPS', plan:'VPS-1000', promo:14.99, renewal:59.99, term:36, storage:90, sites:'—', tech:'Managed KVM / NVMe', support:'24/7 phone + chat', mb:90, founded:2001, hq:'Los Angeles, CA',
+    blurb:'Managed VPS with real phone support — but the largest absolute renewal jump in this catalog: $14.99 to $59.99/mo (+$45).',
+    pros:['Fully managed with phone support','cPanel/WHM included','90-day money-back'],
+    cons:['+$45/mo at renewal — largest here','300% hike percentage','Long terms required for promo'] },
+  { id:'ionos-vps', cat:'vps', name:'IONOS VPS', plan:'VPS Linux XS', promo:2.00, renewal:2.00, term:0, storage:10, sites:'—', tech:'VMware / NVMe', support:'24/7 phone', mb:30, founded:1988, hq:'Montabaur, Germany',
+    blurb:'The cheapest flat-rate VPS from a major provider — $2/mo, no teaser games. Tiny specs, but honest ones.',
+    pros:['$2/mo flat — no hike','Unlimited traffic','24/7 phone support'],
+    cons:['Minimal specs (1 vCPU/1GB)','Dated panel','Upsells within account area'] },
+
+  /* ---------- MANAGED WORDPRESS & CLOUD ---------- */
+  { id:'kinsta-cl', cat:'managed', name:'Kinsta', plan:'Starter', promo:35.00, renewal:35.00, term:0, storage:10, sites:'1 site · 25k visits/mo', tech:'GCP C2 / LXD containers', support:'24/7 expert chat', mb:30, founded:2013, hq:'Los Angeles, CA', rec:true,
+    blurb:'Premium managed WordPress on Google Cloud’s fastest C2 machines. Flat pricing, elite support, and two months free on annual billing.',
+    pros:['GCP C2 + Cloudflare Enterprise','Elite WordPress-expert support','Flat pricing, no teaser games'],
+    cons:['Visit-count pricing model','No email hosting','Overage fees add up'] },
+  { id:'wpengine-cl', cat:'managed', name:'WP Engine', plan:'Startup', promo:20.00, renewal:30.00, term:12, storage:10, sites:'1 site · 25k visits/mo', tech:'AWS + GCP / EverCache', support:'24/7 chat + phone', mb:60, founded:2010, hq:'Austin, TX', rec:true,
+    blurb:'The company that invented managed WordPress. Annual billing gets the intro rate; the monthly rate after is 50% higher.',
+    pros:['Battle-tested platform + staging','60-day money-back','Genesis themes included'],
+    cons:['50% jump off annual intro','Visit-count overages','Plugin restrictions'] },
+  { id:'cloudways-cl', cat:'managed', name:'Cloudways', plan:'DO Starter 1GB', promo:14.00, renewal:14.00, term:0, storage:25, sites:'Unlimited apps', tech:'VMAN stack on DigitalOcean', support:'24/7 chat', mb:0, founded:2012, hq:'Msida, Malta (DO-owned)', rec:true,
+    blurb:'Managed layer over your choice of DigitalOcean, Vultr, or AWS — managed-host convenience at IaaS-adjacent prices, billed flat.',
+    pros:['Pick your underlying cloud','Unlimited apps per server','Flat pricing, 3-day trial'],
+    cons:['No email or domains','Support depth varies','UI learning curve'] },
+  { id:'nexcess-cl', cat:'managed', name:'Nexcess', plan:'Spark', promo:21.00, renewal:21.00, term:0, storage:15, sites:'1 site · 2TB BW', tech:'Liquid Web stack', support:'24/7 chat + phone', mb:30, founded:2000, hq:'Lansing, MI',
+    blurb:'Liquid Web’s managed WordPress/WooCommerce arm — generous bandwidth and no visit-count metering, a rarity in managed WP.',
+    pros:['No visit-count limits','Daily backups included','Strong WooCommerce tooling'],
+    cons:['Interface less polished','Fewer datacenters','Entry tier is single-site'] },
+  { id:'flywheel-cl', cat:'managed', name:'Flywheel', plan:'Tiny', promo:13.00, renewal:15.00, term:12, storage:5, sites:'1 site · 5k visits/mo', tech:'GCP managed', support:'24/7 chat', mb:30, founded:2012, hq:'Omaha, NE',
+    blurb:'Designer-favorite managed WP (now WP Engine-owned) with the friendliest UI in the category and free white-label client billing tools.',
+    pros:['Beautiful, simple dashboard','Agency/client workflow tools','Free staging'],
+    cons:['Tiny plan is truly tiny (5k visits)','Storage just 5GB','Overage charges'] },
+  { id:'pantheon-cl', cat:'managed', name:'Pantheon', plan:'Basic', promo:41.00, renewal:41.00, term:0, storage:20, sites:'1 site · 25k visits/mo', tech:'Containerized / Fastly', support:'Chat + docs', mb:0, founded:2010, hq:'San Francisco, CA',
+    blurb:'WebOps platform for WordPress and Drupal with dev/test/live environments and Git-first workflows — built for teams, priced like it.',
+    pros:['Dev/Test/Live pipelines','Fastly CDN included','Automated visual regression tools'],
+    cons:['Priciest entry tier here','Overkill for simple sites','No email'] },
+  { id:'liquidweb-cl', cat:'managed', name:'Liquid Web', plan:'Managed WP Essential', promo:13.30, renewal:19.00, term:12, storage:15, sites:'1 site', tech:'Managed platform', support:'24/7 phone + chat (59s SLA)', mb:30, founded:1997, hq:'Lansing, MI',
+    blurb:'“Heroic Support” host with a 59-second response SLA on phone and chat. Mild intro step compared to the shared-hosting crowd.',
+    pros:['59-second support SLA','No visit metering','Full server access options'],
+    cons:['43% renewal step','Brand overlaps Nexcess confusingly','Fewer global regions'] },
+  { id:'rocket-cl', cat:'managed', name:'Rocket.net', plan:'Starter', promo:25.00, renewal:30.00, term:12, storage:10, sites:'1 site · 250k visits/mo', tech:'Cloudflare Enterprise edge', support:'24/7 chat + phone', mb:30, founded:2020, hq:'Fort Lauderdale, FL',
+    blurb:'Every plan fronted by full Cloudflare Enterprise (WAF, edge caching) — routinely tops TTFB benchmarks. 250k visits dwarfs rivals’ 25k.',
+    pros:['Cloudflare Enterprise included','10× the visit allowance of rivals','Consistently #1 in TTFB tests'],
+    cons:['Young company (2020)','10GB storage at entry','20% step off intro'] },
+  { id:'pressable-cl', cat:'managed', name:'Pressable', plan:'Starter', promo:25.00, renewal:25.00, term:0, storage:20, sites:'1 site · 30k visits/mo', tech:'WP Cloud (Automattic)', support:'24/7 chat', mb:30, founded:2010, hq:'San Antonio, TX',
+    blurb:'Automattic-owned (the WordPress.com people) on the same WP Cloud platform — includes Jetpack Security and a 100% uptime guarantee.',
+    pros:['Automattic’s WP Cloud infra','Jetpack Security bundled','Flat pricing'],
+    cons:['Less brand recognition','Dashboard is spartan','No phone support'] },
+  { id:'wpx-cl', cat:'managed', name:'WPX', plan:'Business', promo:20.99, renewal:24.99, term:12, storage:15, sites:'5 sites', tech:'Custom / XDN CDN', support:'24/7 chat (~30s avg)', mb:30, founded:2013, hq:'Sofia, Bulgaria',
+    blurb:'Cult-favorite managed host with famously fast live-chat (30-second average) and 5 sites included where rivals give one.',
+    pros:['5 sites at entry price','~30s average chat response','Free malware removal + fixes'],
+    cons:['Custom panel, no cPanel','Fewer datacenters (3)','19% step off intro'] },
+  { id:'dreampress-cl', cat:'managed', name:'DreamHost', plan:'DreamPress', promo:16.95, renewal:19.99, term:12, storage:30, sites:'1 site · ~100k visits/mo', tech:'Managed VPS + Varnish', support:'24/7 tickets, chat', mb:97, founded:1996, hq:'Los Angeles, CA',
+    blurb:'DreamHost’s managed WP tier: generous 100k-visit allowance and the same 97-day money-back umbrella as its shared plans.',
+    pros:['~100k visits at entry price','97-day money-back','Jetpack included'],
+    cons:['Panel is DreamHost-custom','Support depth below Kinsta/WPE','18% step off intro'] },
+  { id:'wpcom-cl', cat:'managed', name:'WordPress.com', plan:'Business', promo:25.00, renewal:25.00, term:0, storage:50, sites:'1 site · unmetered visits', tech:'WP Cloud (Automattic)', support:'24/7 chat + email', mb:14, founded:2005, hq:'San Francisco, CA',
+    blurb:'Automattic’s flagship — the Business tier unlocks plugins/themes and brings unmetered traffic on the world’s largest WP fleet.',
+    pros:['Unmetered visits','50GB storage — most in class','Global edge network'],
+    cons:['Plugins locked below this tier','14-day refund window only','Platform constraints vs self-hosted'] },
+
+  /* ---------- HYPERSCALE & PaaS ---------- */
+  { id:'lightsail-px', cat:'paas', name:'AWS Lightsail', plan:'1GB Instance', promo:5.00, renewal:5.00, term:0, storage:40, sites:'—', tech:'EC2-backed VPS', support:'Docs + paid plans', mb:0, founded:2006, hq:'Seattle, WA', rec:true,
+    blurb:'Amazon’s fixed-price on-ramp: VPS simplicity with a bridge into the full AWS ecosystem when you outgrow it. First 3 months often free.',
+    pros:['Fixed price inside AWS','Free tier for 3 months','Graduate path to full EC2'],
+    cons:['Support costs extra','Bandwidth overages billed','AWS console complexity nearby'] },
+  { id:'gcp-px', cat:'paas', name:'Google Cloud', plan:'e2-small VM', promo:13.00, renewal:13.00, term:0, storage:30, sites:'—', tech:'Compute Engine', support:'Docs + paid plans', mb:0, founded:2008, hq:'Mountain View, CA',
+    blurb:'Compute Engine with automatic sustained-use discounts and a genuinely free e2-micro tier — but you must watch usage-based line items.',
+    pros:['Sustained-use auto discounts','Free e2-micro tier exists','Premium global network'],
+    cons:['Billing complexity','Support costs extra','Egress fees surprise newcomers'] },
+  { id:'azure-px', cat:'paas', name:'Microsoft Azure', plan:'App Service B1', promo:13.00, renewal:13.00, term:0, storage:10, sites:'—', tech:'Managed app platform', support:'Docs + paid plans', mb:0, founded:2010, hq:'Redmond, WA',
+    blurb:'Managed app hosting deeply integrated with the Microsoft stack — the default when your team lives in Visual Studio and Entra ID.',
+    pros:['First-class .NET integration','Deploy slots for staging','Enterprise compliance depth'],
+    cons:['Costs climb quickly at scale','Portal complexity','Support plans cost extra'] },
+  { id:'fly-px', cat:'paas', name:'Fly.io', plan:'shared-cpu-1x', promo:5.00, renewal:5.00, term:0, storage:10, sites:'—', tech:'Firecracker microVMs @ edge', support:'Community + email', mb:0, founded:2017, hq:'Chicago, IL',
+    blurb:'Runs your Docker containers as microVMs in 30+ regions close to users — a developer favorite for latency-sensitive full-stack apps.',
+    pros:['Deploy to 30+ edge regions','Scale-to-zero economics','Real hardware-isolated VMs'],
+    cons:['Usage-based beyond basics','Community-first support','Docs assume expertise'] },
+  { id:'render-px', cat:'paas', name:'Render', plan:'Starter Service', promo:7.00, renewal:7.00, term:0, storage:null, sites:'—', tech:'Managed containers', support:'Email + community', mb:0, founded:2019, hq:'San Francisco, CA',
+    blurb:'The Heroku-successor pick: Git-push deploys, free TLS, and predictable per-service pricing without dyno nostalgia.',
+    pros:['Git-push deploy simplicity','Free static sites + TLS','Predictable per-service pricing'],
+    cons:['Disks billed separately','Free tier services sleep','Fewer regions than Fly'] },
+  { id:'railway-px', cat:'paas', name:'Railway', plan:'Hobby', promo:5.00, renewal:5.00, term:0, storage:null, sites:'—', tech:'Usage-based containers', support:'Community + email', mb:0, founded:2020, hq:'San Francisco, CA',
+    blurb:'Slick usage-based platform: $5/mo includes $5 of metered compute — beautiful DX, but bills can exceed the sticker if traffic spikes.',
+    pros:['Best-in-class developer UX','Instant Postgres/Redis add-ons','Pay only for usage'],
+    cons:['Usage can exceed flat $5','No SLA on Hobby','Young platform'] },
+  { id:'heroku-px', cat:'paas', name:'Heroku', plan:'Basic Dyno', promo:7.00, renewal:7.00, term:0, storage:null, sites:'—', tech:'Managed PaaS (Salesforce)', support:'Tickets', mb:0, founded:2007, hq:'San Francisco, CA',
+    blurb:'The original git-push PaaS, now Salesforce-owned. Free tier is gone, but the buildpack ecosystem and add-on marketplace remain unmatched.',
+    pros:['Mature add-on marketplace','Buildpacks for every stack','Battle-tested platform'],
+    cons:['No free tier anymore','Pricey as you scale dynos','Innovation has slowed'] },
+  { id:'vercel-px', cat:'paas', name:'Vercel', plan:'Pro', promo:20.00, renewal:20.00, term:0, storage:null, sites:'—', tech:'Edge / serverless (Next.js)', support:'Email + community', mb:0, founded:2015, hq:'San Francisco, CA',
+    blurb:'The home of Next.js: unbeatable frontend DX with preview deployments per pull request. Watch serverless usage overages on top of the flat $20.',
+    pros:['Preview deploys per PR','Global edge network','Zero-config Next.js'],
+    cons:['Overage fees beyond quotas','Backend needs external services','Costs balloon at high traffic'] },
+];
+
+const CATS = {
+  all:     { label:'All tiers' },
+  shared:  { label:'Shared & Economy' },
+  vps:     { label:'VPS & Dedicated' },
+  managed: { label:'Managed & Cloud WP' },
+  paas:    { label:'Hyperscale & PaaS' },
+};
+const MAX_LINES = 8; // categorical series ceiling for the timeline
+
+/* ===================== STATE ===================== */
+let activeCat = 'all';
+let activeChart = 'timeline';
+let selectedIds = [];                 // selection order preserved
+const slotMap = new Map();            // providerId -> categorical slot (0-7), stable while selected
+let mainChart = null;
+let sortKey = 'tco', sortDir = 1;
+
+/* ===================== PRICING MATH ===================== */
+const byId = id => providers.find(p => p.id === id);
+const tco = p => p.term > 0
+  ? p.promo * Math.min(p.term, 48) + p.renewal * Math.max(0, 48 - p.term)
+  : p.renewal * 48;
+const introSpend = p => p.term > 0 ? p.promo * Math.min(p.term, 48) : 0;
+const renewSpend = p => p.term > 0 ? p.renewal * Math.max(0, 48 - p.term) : p.renewal * 48;
+const effMonthly = p => tco(p) / 48;
+const cumAt = (p, m) => p.term > 0
+  ? p.promo * Math.min(m, p.term) + p.renewal * Math.max(0, m - p.term)
+  : p.renewal * m;
+
+function hikeInfo(p) {
+  const pct = p.promo > 0 ? ((p.renewal - p.promo) / p.promo) * 100 : 0;
+  const delta = p.renewal - p.promo;
+  let tier, icon, word;
+  if (pct <= 0)                      { tier='flat';      icon='✓'; word='Flat pricing'; }
+  else if (pct >= 100 && delta >= 5) { tier='predatory'; icon='⚠'; word='Predatory intro'; }
+  else if (pct >= 50)                { tier='steep';     icon='▲'; word='Steep renewal'; }
+  else                               { tier='moderate';  icon='↗'; word='Mild increase'; }
+  return { pct, delta, tier, icon, word };
+}
+const badgeHtml = p => {
+  const h = hikeInfo(p);
+  const pctTxt = h.tier === 'flat' ? '' : ` +${Math.round(h.pct)}%`;
+  return `<span class="badge badge-${h.tier}">${h.icon} ${h.word}${pctTxt}</span>`;
+};
+const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const money2 = n => '$' + Number(n).toFixed(2);
+
+/* ===================== THEME ===================== */
+function themeVals() {
+  const s = getComputedStyle(document.documentElement);
+  const v = n => s.getPropertyValue(n).trim();
+  return {
+    surface:v('--surface'), page:v('--page'), ink1:v('--ink-1'), ink2:v('--ink-2'),
+    ink3:v('--ink-3'), grid:v('--grid'), baseline:v('--baseline'),
+    seqLight:v('--seq-light'), seqDark:v('--seq-dark'), accent:v('--accent'),
+    crit:v('--crit'), tooltipBg:v('--tooltip-bg'), tooltipInk:v('--tooltip-ink'),
+    series:[v('--s1'),v('--s2'),v('--s3'),v('--s4'),v('--s5'),v('--s6'),v('--s7'),v('--s8')],
+  };
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('nexus-theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
+  updateApp();
+}
+(function initTheme(){
+  const saved = localStorage.getItem('nexus-theme');
+  const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (dark) document.documentElement.setAttribute('data-theme','dark');
+})();
+
+/* ===================== SELECTION ===================== */
+function toggleProvider(id) {
+  if (selectedIds.includes(id)) {
+    selectedIds = selectedIds.filter(i => i !== id);
+    slotMap.delete(id);
+  } else {
+    selectedIds.push(id);
+    const used = new Set(slotMap.values());
+    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(id, s); break; }
+  }
+  updateApp();
+}
+function resetToRecommended() {
+  selectedIds = []; slotMap.clear();
+  providers.filter(p => p.rec).forEach(p => {
+    selectedIds.push(p.id);
+    const used = new Set(slotMap.values());
+    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(p.id, s); break; }
+  });
+  updateApp();
+}
+function clearAll() { selectedIds = []; slotMap.clear(); updateApp(); }
+
+/* ===================== KPI ROW ===================== */
+function renderKpis() {
+  const sel = selectedIds.map(byId);
+  const preds = sel.filter(p => hikeInfo(p).tier === 'predatory');
+  const cheapest = sel.length ? sel.reduce((a,b) => tco(a) <= tco(b) ? a : b) : null;
+  const avgHike = sel.length ? sel.reduce((s,p) => s + hikeInfo(p).pct, 0) / sel.length : 0;
+  const tile = (label, value, sub, valStyle='') => `
+    <div class="card rounded-2xl p-5">
+      <p class="text-[10px] font-bold ink3 uppercase tracking-widest mb-2">${label}</p>
+      <p class="text-2xl font-bold ink1 leading-none" ${valStyle}>${value}</p>
+      ${sub ? `<p class="text-[11px] ink3 mt-2">${sub}</p>` : ''}
+    </div>`;
+  document.getElementById('kpi-row').innerHTML =
+    tile('Providers tracked', providers.length, 'across 4 hosting tiers') +
+    tile('In comparison', sel.length, sel.length ? 'live in all charts below' : 'none selected yet') +
+    tile('Cheapest 4-yr TCO', cheapest ? money(tco(cheapest)) : '—', cheapest ? `${cheapest.name} · ${cheapest.plan}` : 'select providers') +
+    tile('Predatory intro flags', preds.length,
+      preds.length ? preds.map(p=>p.name).join(', ') : (sel.length ? 'none in selection ✓' : 'select providers'),
+      preds.length ? 'style="color:var(--crit-deep)"' : '') +
+    tile('Avg. renewal hike', sel.length ? '+' + Math.round(avgHike) + '%' : '—', 'mean across selection');
+}
+
+/* ===================== PREDATORY ALERT ===================== */
+function renderAlert() {
+  const el = document.getElementById('predatory-alert');
+  const preds = selectedIds.map(byId).filter(p => hikeInfo(p).tier === 'predatory');
+  if (!preds.length) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  document.getElementById('predatory-alert-body').innerHTML =
+    preds.map(p => {
+      const h = hikeInfo(p);
+      return `<strong class="ink1">${p.name}</strong> advertises ${money2(p.promo)}/mo but renews at ${money2(p.renewal)}/mo (+${Math.round(h.pct)}%, +${money2(h.delta)}/mo) after ${p.term} months`;
+    }).join(' · ') +
+    '. The intro rate is still shown as its own metric in every chart — just budget for the renewal.';
+}
+
+/* ===================== CATALOG ===================== */
+function renderPills() {
+  const q = document.getElementById('cat-pills');
+  q.innerHTML = Object.entries(CATS).map(([key, c]) => {
+    const n = key === 'all' ? providers.length : providers.filter(p => p.cat === key).length;
+    return `<button class="pill ${activeCat===key?'active':''}" onclick="setCat('${key}')">${c.label} <span class="opacity-60">${n}</span></button>`;
+  }).join('');
+}
+function setCat(c) { activeCat = c; renderPills(); renderCatalog(); }
+
+function renderCatalog() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const grid = document.getElementById('selection-grid');
+  const list = providers.filter(p =>
+    (activeCat === 'all' || p.cat === activeCat) &&
+    (!q || [p.name, p.plan, p.tech, p.hq].join(' ').toLowerCase().includes(q))
+  );
+  grid.innerHTML = list.map(p => {
+    const sel = selectedIds.includes(p.id);
+    return `
+    <div class="provider-card card p-5 ${sel ? 'selected' : ''}" onclick="toggleProvider('${p.id}')">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="font-black ink1 text-sm leading-tight">${p.name}</p>
+          <p class="text-[11px] ink3">${p.plan}</p>
         </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-6 py-12">
-        
-        <!-- Intro Paragraph -->
-        <div class="max-w-4xl mb-12">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight leading-none uppercase">The Global Infrastructure Nexus.</h1>
-            <p class="text-lg text-slate-600 leading-relaxed max-w-3xl">
-                We have expanded our database to include **25+ trusted global providers**. This tool now encompasses eco-friendly hosting, high-performance European infrastructure, and enterprise-grade cloud. Select providers from the catalogs below to live-update the TCO (Total Cost of Ownership) and technical ceiling comparisons.
-            </p>
+        <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5"
+             style="border-color:${sel ? 'var(--accent)' : 'var(--baseline)'}; background:${sel ? 'var(--accent)' : 'transparent'}">
+          ${sel ? '<span class="text-[9px] text-white font-bold">✓</span>' : ''}
         </div>
+      </div>
+      <div class="flex items-baseline gap-2 mb-1">
+        <span class="text-xl font-bold ink1 num">${money2(p.promo)}</span>
+        <span class="text-[10px] ink3">/mo intro</span>
+      </div>
+      <p class="text-[11px] ink3 mb-2 num">renews at ${money2(p.renewal)}/mo${p.term ? ` after ${p.term} mo` : ''}</p>
+      <div class="flex flex-wrap gap-1 mb-3">
+        ${badgeHtml(p)}
+        ${p.eco ? '<span class="badge badge-eco">🌱 Green</span>' : ''}
+        ${p.rec ? '<span class="badge badge-pick">★ Agency pick</span>' : ''}
+      </div>
+      <p class="text-[11px] ink2 leading-snug mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.blurb}</p>
+      <button class="btn-detail" onclick="event.stopPropagation(); showDetails('${p.id}')">Details →</button>
+    </div>`;
+  }).join('');
+}
 
-        <!-- Dashboard Charts -->
-        <div class="grid lg:grid-cols-2 gap-8 mb-16">
-            <div class="glass-card p-8 rounded-3xl shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">48-Month Total Cost Forecast ($)</h3>
-                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Cumulative</span>
-                </div>
-                <div class="chart-container">
-                    <canvas id="costChart"></canvas>
-                </div>
-            </div>
-            <div class="glass-card p-8 rounded-3xl shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deployment Ceiling (Inodes/Resource)</h3>
-                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Metric Scaling</span>
-                </div>
-                <div class="chart-container">
-                    <canvas id="limitChart"></canvas>
-                </div>
-            </div>
-        </div>
+/* ===================== DETAILS MODAL ===================== */
+function showDetails(id) {
+  const p = byId(id);
+  const h = hikeInfo(p);
+  const fact = (k, v) => `<div class="flex justify-between gap-4 py-1.5 hairline-b text-xs"><span class="ink3">${k}</span><span class="ink1 font-semibold text-right">${v}</span></div>`;
+  document.getElementById('modal-content').innerHTML = `
+    <div class="mb-4">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <h3 class="text-2xl font-black ink1">${p.name}</h3>
+        ${badgeHtml(p)} ${p.eco ? '<span class="badge badge-eco">🌱 Green</span>' : ''} ${p.rec ? '<span class="badge badge-pick">★ Agency pick</span>' : ''}
+      </div>
+      <p class="text-sm ink3">${p.plan} · ${CATS[p.cat].label} · Founded ${p.founded} · ${p.hq}</p>
+    </div>
+    <p class="text-sm ink2 leading-relaxed mb-5">${p.blurb}</p>
+    ${h.tier === 'predatory' ? `
+      <div class="rounded-xl p-4 mb-5" style="background:var(--crit-bg); border:1px solid var(--crit);">
+        <p class="text-xs font-black mb-1" style="color:var(--crit-deep)">⚠ Predatory introductory pricing</p>
+        <p class="text-xs ink2">The advertised ${money2(p.promo)}/mo lasts ${p.term} months, then jumps ${Math.round(h.pct)}% to ${money2(p.renewal)}/mo (+${money2(h.delta)}/mo).${renewSpend(p) > 0 ? ` Within the 4-year window, ${money(introSpend(p))} is billed at the intro rate and ${money(renewSpend(p))} at the renewal rate.` : ` The intro rate covers the full 4-year window — the hike lands when the term renews after that, so budget ${money2(p.renewal)}/mo from year 5.`}</p>
+      </div>` : ''}
+    <div class="grid md:grid-cols-2 gap-6 mb-5">
+      <div>
+        <p class="text-[10px] font-black ink3 uppercase tracking-widest mb-2">Pricing</p>
+        ${fact('Intro price', money2(p.promo) + '/mo')}
+        ${fact('Renewal price', money2(p.renewal) + '/mo')}
+        ${fact('Intro term', p.term ? p.term + ' months' : 'None — flat pricing')}
+        ${fact('Renewal hike', (h.pct <= 0 ? 'None' : '+' + Math.round(h.pct) + '%'))}
+        ${fact('Effective (48-mo avg)', money2(effMonthly(p)) + '/mo')}
+        ${fact('4-year TCO', money(tco(p)))}
+      </div>
+      <div>
+        <p class="text-[10px] font-black ink3 uppercase tracking-widest mb-2">Facts</p>
+        ${fact('Storage', p.unmetered ? 'Unmetered' : (p.storage != null ? p.storage + ' GB' : 'Usage-based'))}
+        ${fact('Scope', p.sites)}
+        ${fact('Stack', p.tech)}
+        ${fact('Support', p.support)}
+        ${fact('Money-back', p.mb ? p.mb + ' days' : '—')}
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div>
+        <p class="text-[10px] font-black ink3 uppercase tracking-widest mb-2">Strengths</p>
+        <ul class="space-y-1.5">${p.pros.map(x => `<li class="text-xs ink2 flex gap-2"><span style="color:var(--good-deep)" class="font-bold">✓</span>${x}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <p class="text-[10px] font-black ink3 uppercase tracking-widest mb-2">Watch out for</p>
+        <ul class="space-y-1.5">${p.cons.map(x => `<li class="text-xs ink2 flex gap-2"><span style="color:var(--crit-deep)" class="font-bold">✗</span>${x}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <button onclick="toggleProvider('${p.id}'); closeModal();" class="w-full py-3 rounded-xl font-bold text-sm text-white" style="background:var(--accent)">
+      ${selectedIds.includes(p.id) ? 'Remove from comparison' : 'Add to comparison'}
+    </button>`;
+  document.getElementById('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-        <!-- Selector Section -->
-        <div class="mb-12">
-            <div class="flex items-end justify-between mb-8">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-900 mb-1">Infrastructure Catalog</h2>
-                    <p class="text-sm text-slate-500">Filter by tier and select your candidates.</p>
-                </div>
-                <div class="flex space-x-4">
-                    <button onclick="clearAll()" class="text-[10px] font-bold text-rose-600 uppercase tracking-widest hover:underline">Clear All</button>
-                    <button onclick="resetToRecommended()" class="text-[10px] font-bold text-teal-600 uppercase tracking-widest hover:underline">Agency Picks</button>
-                </div>
-            </div>
-            
-            <div id="selection-grid" class="provider-grid">
-                <!-- Populated by JS -->
-            </div>
-        </div>
+/* ===================== TABLE ===================== */
+const COLS = [
+  { key:'name',    label:'Provider',        get:p=>p.name },
+  { key:'promo',   label:'Intro $/mo',      get:p=>p.promo },
+  { key:'renewal', label:'Renews at',       get:p=>p.renewal },
+  { key:'pct',     label:'Hike',            get:p=>hikeInfo(p).pct },
+  { key:'term',    label:'Intro term',      get:p=>p.term },
+  { key:'storage', label:'Storage',         get:p=>p.unmetered ? Infinity : (p.storage ?? -1) },
+  { key:'mb',      label:'Money-back',      get:p=>p.mb },
+  { key:'eff',     label:'Eff. $/mo',       get:p=>effMonthly(p) },
+  { key:'tco',     label:'4-yr TCO',        get:p=>tco(p) },
+];
+function setSort(key) {
+  if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+  renderTable();
+}
+function renderTable() {
+  document.getElementById('table-head').innerHTML = COLS.map(c =>
+    `<th class="p-4 sortable ${sortKey===c.key?'ink1':''}" onclick="setSort('${c.key}')">${c.label}${sortKey===c.key ? (sortDir>0?' ↑':' ↓') : ''}</th>`
+  ).join('');
+  const col = COLS.find(c => c.key === sortKey);
+  const data = selectedIds.map(byId).slice().sort((a,b) => {
+    const av = col.get(a), bv = col.get(b);
+    return (typeof av === 'string' ? av.localeCompare(bv) : av - bv) * sortDir;
+  });
+  document.getElementById('comparison-table-body').innerHTML = data.map(p => `
+    <tr class="hairline-b hover:opacity-80 transition-opacity cursor-pointer" onclick="showDetails('${p.id}')">
+      <td class="p-4"><p class="ink1 font-bold">${p.name}</p><p class="text-[10px] ink3">${p.plan}</p></td>
+      <td class="p-4 ink1 font-semibold num">${money2(p.promo)}</td>
+      <td class="p-4 ink2 num">${money2(p.renewal)}</td>
+      <td class="p-4">${badgeHtml(p)}</td>
+      <td class="p-4 ink2 num">${p.term ? p.term + ' mo' : '—'}</td>
+      <td class="p-4 ink2 num">${p.unmetered ? 'Unmetered' : (p.storage != null ? p.storage + ' GB' : '—')}</td>
+      <td class="p-4 ink2 num">${p.mb ? p.mb + ' d' : '—'}</td>
+      <td class="p-4 ink2 num">${money2(effMonthly(p))}</td>
+      <td class="p-4 ink1 font-black num">${money(tco(p))}</td>
+    </tr>`).join('');
+}
 
-        <!-- Comparative Data Table -->
-        <div id="table-container" class="glass-card rounded-3xl overflow-hidden shadow-sm hidden">
-            <div class="p-6 border-b border-slate-100 bg-white/50">
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Technical Delta Matrix</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                        <tr>
-                            <th class="p-6">Provider</th>
-                            <th class="p-6">Monthly (Start)</th>
-                            <th class="p-6">Monthly (Renew)</th>
-                            <th class="p-6">Price Jump</th>
-                            <th class="p-6">Tech Stack</th>
-                            <th class="p-6">4-Year TCO</th>
-                        </tr>
-                    </thead>
-                    <tbody id="comparison-table-body" class="text-sm font-medium">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+/* ===================== CHARTS ===================== */
+const CAPTIONS = {
+  timeline:  'Cumulative spend from month 0 to 48. Kinks in a line mark the moment an introductory term expires and the renewal rate kicks in — the steeper the bend, the harder the hike.',
+  tco:       'Total 4-year cost, split into spend billed at the intro rate (light) and at the renewal/standard rate (dark). Sorted cheapest first. A mostly-dark bar means the advertised teaser barely matters; flat-priced plans are fully dark by definition.',
+  introrenew:'The advertised intro price (light) beside the renewal price you’ll actually pay (dark), per provider. Wide gaps between the pair are where budgets go to die.',
+  shock:     'Each dot is a provider: advertised intro price (x) versus the percentage jump at renewal (y). Dots above the dashed line — ≥100% with a ≥$5/mo jump — are flagged predatory.',
+  storage:   'Included storage per plan, in GB. Unmetered plans are drawn full-width in gray — no fixed cap, subject to fair-use policies. Usage-based plans (some PaaS) are omitted.',
+};
+const thresholdLine = {
+  id: 'thresholdLine',
+  afterDraw(chart, args, opts) {
+    if (!opts || opts.y == null || !chart.scales.y) return;
+    const yPix = chart.scales.y.getPixelForValue(opts.y);
+    const { left, right } = chart.chartArea;
+    if (yPix < chart.chartArea.top || yPix > chart.chartArea.bottom) return;
+    const c = chart.ctx;
+    c.save();
+    c.strokeStyle = opts.color; c.lineWidth = 1; c.setLineDash([5,4]);
+    c.beginPath(); c.moveTo(left, yPix); c.lineTo(right, yPix); c.stroke();
+    c.setLineDash([]);
+    c.fillStyle = opts.color; c.font = '700 10px system-ui';
+    c.fillText(opts.label, left + 6, yPix - 6);
+    c.restore();
+  }
+};
+Chart.register(thresholdLine);
 
-        <!-- Empty State -->
-        <div id="empty-state" class="text-center py-20 glass-card rounded-3xl border-dashed border-2">
-            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Select providers above to activate the intelligence engine</p>
-        </div>
+function setChart(type) {
+  activeChart = type;
+  document.querySelectorAll('#chart-tabs .chart-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.chart === type));
+  renderChart();
+}
 
-    </main>
+function baseOptions(t) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true, position: 'top', align: 'end',
+        labels: { color: t.ink2, usePointStyle: true, pointStyleWidth: 10, boxHeight: 7, font: { size: 11 } }
+      },
+      tooltip: {
+        backgroundColor: t.tooltipBg, titleColor: t.tooltipInk, bodyColor: t.tooltipInk,
+        padding: 10, cornerRadius: 8, boxPadding: 4,
+        titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 }
+      },
+      thresholdLine: false,
+    },
+  };
+}
 
-    <!-- Application Structure Plan:
-        1. EXPANDED DATASET: Now includes 25+ providers covering every 'trusted' niche (Eco, EU-centric, Managed WP, High-Performance VPS).
-        2. SMART CATEGORIZATION: Categories are refined into 'Shared/Economy', 'VPS/Dedicated', and 'Cloud/Managed' to handle the higher volume of data.
-        3. TCO NORMALIZATION: All costs are normalized to a 48-month window, even for providers that don't offer 4-year terms (simulating consecutive renewals).
-        4. DYNAMIC SCALING: Charts now support a larger number of datasets without overlapping labels, using Chart.js responsive features.
-    -->
+function renderChart() {
+  document.getElementById('chart-caption').textContent = CAPTIONS[activeChart];
+  const note = document.getElementById('chart-note');
+  note.classList.add('hidden');
+  if (mainChart) { mainChart.destroy(); mainChart = null; }
+  const sel = selectedIds.map(byId);
+  if (!sel.length) return;
 
-    <!-- Visualization & Content Choices:
-        - Bar Charts: Used for TCO and Inode limits to show ranking clearly among a larger set.
-        - Matrix Table: High-density technical data including "Renewal Shock" percentage calculations.
-        - No SVG: Using Tailwind borders, icons, and Canvas only.
-    -->
+  const t = themeVals();
+  Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+  Chart.defaults.color = t.ink3;
 
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+  const holder = document.getElementById('chart-holder');
+  const horizontalCharts = ['tco','introrenew','storage'];
+  holder.style.height = horizontalCharts.includes(activeChart)
+    ? Math.max(340, sel.length * (activeChart === 'introrenew' ? 44 : 34) + 110) + 'px'
+    : '420px';
+  const ctx = document.getElementById('mainChart');
 
-    <script>
-        const providers = [
-            // SHARED / ECONOMY TIER
-            { id: 'hsg-sh', cat: 'shared', name: 'Hostinger', plan: 'Cloud Startup', promo: 7.99, renewal: 19.99, term: 48, limit: 2.0, lUnit: 'M Inodes', tech: 'LiteSpeed / NVMe', rec: true },
-            { id: 'a2-sh', cat: 'shared', name: 'A2 Hosting', plan: 'Turbo Max', promo: 14.99, renewal: 25.99, term: 36, limit: 0.6, lUnit: 'M Inodes', tech: 'LiteSpeed Turbo', rec: true },
-            { id: 'sg-sh', cat: 'shared', name: 'SiteGround', plan: 'GoGeek', promo: 7.99, renewal: 44.99, term: 12, limit: 0.4, lUnit: 'M Inodes', tech: 'Nginx / GCP', rec: true },
-            { id: 'bh-sh', cat: 'shared', name: 'Bluehost', plan: 'Pro', promo: 13.95, renewal: 28.99, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'Apache / SSD' },
-            { id: 'dh-sh', cat: 'shared', name: 'DreamHost', plan: 'Unlimited', promo: 3.95, renewal: 13.99, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'Apache / SSD' },
-            { id: 'nc-sh', cat: 'shared', name: 'Namecheap', plan: 'Stellar Plus', promo: 2.98, renewal: 6.48, term: 12, limit: 0.3, lUnit: 'M Inodes', tech: 'Apache / SSD' },
-            { id: 'gg-sh', cat: 'shared', name: 'GreenGeeks', plan: 'Premium', promo: 4.95, renewal: 25.95, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'LiteSpeed / Eco' },
-            { id: 'is-sh', cat: 'shared', name: 'InterServer', plan: 'Standard', promo: 2.50, renewal: 7.00, term: 12, limit: 0.25, lUnit: 'M Inodes', tech: 'Apache' },
-            { id: 'fc-sh', cat: 'shared', name: 'FastComet', plan: 'FastCloud Extra', promo: 5.95, renewal: 19.95, term: 12, limit: 0.5, lUnit: 'M Inodes', tech: 'LiteSpeed / NVMe' },
-            { id: 'sh-sh', cat: 'shared', name: 'ScalaHosting', plan: 'Entry', promo: 2.95, renewal: 13.95, term: 36, limit: 0.4, lUnit: 'M Inodes', tech: 'SPanel / NVMe' },
+  const gridOpts = { color: t.grid, lineWidth: 1 };
+  const tickFont = { size: 10 };
 
-            // VPS & DEDICATED TIER
-            { id: 'do-vps', cat: 'vps', name: 'DigitalOcean', plan: 'Basic Droplet', promo: 6.00, renewal: 6.00, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'Droplets', rec: true },
-            { id: 'vl-vps', cat: 'vps', name: 'Vultr', plan: 'High Frequency', promo: 6.00, renewal: 6.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'NVMe Compute', rec: true },
-            { id: 'hz-vps', cat: 'vps', name: 'Hetzner', plan: 'CPX11', promo: 4.85, renewal: 4.85, term: 0, limit: 20, lUnit: 'TB BW', tech: 'KVM / EU', rec: true },
-            { id: 'li-vps', cat: 'vps', name: 'Linode', plan: 'Shared 2GB', promo: 12.00, renewal: 12.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'Akamai Cloud' },
-            { id: 'ov-vps', cat: 'vps', name: 'OVHcloud', plan: 'VPS VLE-2', promo: 4.50, renewal: 4.50, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'KVM' },
-            { id: 'im-vps', cat: 'vps', name: 'InMotion', plan: 'VPS-1000', promo: 14.99, renewal: 59.99, term: 36, limit: 4.0, lUnit: 'GB RAM', tech: 'Managed VPS' },
-            { id: 'ct-vps', cat: 'vps', name: 'Contabo', plan: 'Cloud VPS S', promo: 8.49, renewal: 8.49, term: 0, limit: 32, lUnit: 'TB BW', tech: 'German KVM' },
-            { id: 'hsg-vps', cat: 'vps', name: 'Hostinger VPS', plan: 'KVM 2', promo: 5.99, renewal: 11.99, term: 24, limit: 8.0, lUnit: 'GB RAM', tech: 'KVM Self-Managed' },
-
-            // CLOUD & MANAGED TIER
-            { id: 'ks-cl', cat: 'cloud', name: 'Kinsta', plan: 'Starter', promo: 35.00, renewal: 35.00, term: 0, limit: 25, lUnit: 'k Visits', tech: 'GCP / LXD', rec: true },
-            { id: 'we-cl', cat: 'cloud', name: 'WP Engine', plan: 'Startup', promo: 20.00, renewal: 30.00, term: 12, limit: 25, lUnit: 'k Visits', tech: 'AWS / EverCache', rec: true },
-            { id: 'cw-cl', cat: 'cloud', name: 'Cloudways', plan: 'DO-1GB', promo: 14.00, renewal: 14.00, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'VMAN Stack' },
-            { id: 'nx-cl', cat: 'cloud', name: 'Nexcess', plan: 'Spark', promo: 21.00, renewal: 21.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'Liquid Web Stack' },
-            { id: 'fw-cl', cat: 'cloud', name: 'Flywheel', plan: 'Tiny', promo: 13.00, renewal: 15.00, term: 12, limit: 5, lUnit: 'k Visits', tech: 'GCP Managed' },
-            { id: 'pt-cl', cat: 'cloud', name: 'Pantheon', plan: 'Basic', promo: 41.00, renewal: 41.00, term: 0, limit: 25, lUnit: 'k Visits', tech: 'Containerized' },
-            { id: 'lw-cl', cat: 'cloud', name: 'Liquid Web', plan: 'Essential', promo: 13.30, renewal: 19.00, term: 12, limit: 1.0, lUnit: 'TB BW', tech: 'Premium Managed' }
-        ];
-
-        let activeTab = 'shared';
-        let selectedIds = [];
-        let charts = {};
-
-        function setTab(tab) {
-            activeTab = tab;
-            document.querySelectorAll('header button').forEach(b => {
-                b.classList.remove('tab-active');
-                b.classList.add('text-slate-400');
-            });
-            const activeBtn = document.getElementById('tab-' + tab);
-            activeBtn.classList.add('tab-active');
-            activeBtn.classList.remove('text-slate-400');
-            renderSelector();
+  /* ---- 1. Cumulative cost timeline (multi-line, categorical) ---- */
+  if (activeChart === 'timeline') {
+    const lined = sel.filter(p => slotMap.get(p.id) !== undefined).slice(0, MAX_LINES);
+    if (sel.length > lined.length) {
+      note.textContent = `Showing the first ${MAX_LINES} selected providers — a readable ceiling for distinct line colors. All ${sel.length} selections remain in the other charts and the table below.`;
+      note.classList.remove('hidden');
+    }
+    const months = Array.from({length: 17}, (_, i) => i * 3); // 0..48 quarterly
+    mainChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: months.map(m => 'Mo ' + m),
+        datasets: lined.map(p => ({
+          label: p.name,
+          data: months.map(m => +cumAt(p, m).toFixed(2)),
+          borderColor: t.series[slotMap.get(p.id)],
+          backgroundColor: t.series[slotMap.get(p.id)],
+          borderWidth: 2, tension: 0, pointRadius: 0,
+          pointHoverRadius: 5, pointHoverBorderColor: t.surface, pointHoverBorderWidth: 2,
+        }))
+      },
+      options: {
+        ...baseOptions(t),
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          ...baseOptions(t).plugins,
+          tooltip: { ...baseOptions(t).plugins.tooltip,
+            itemSort: (a,b) => b.parsed.y - a.parsed.y,
+            callbacks: { label: c => ` ${c.dataset.label}: ${money(c.parsed.y)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
+               ticks: { font: tickFont, callback: v => money(v) } },
+          x: { grid: { display: false }, border: { color: t.baseline }, ticks: { font: tickFont, maxTicksLimit: 9 } }
         }
+      }
+    });
+  }
 
-        function toggleProvider(id) {
-            if (selectedIds.includes(id)) {
-                selectedIds = selectedIds.filter(i => i !== id);
-            } else {
-                selectedIds.push(id);
-            }
-            updateApp();
+  /* ---- 2. 4-year TCO, stacked intro vs renewal spend ---- */
+  if (activeChart === 'tco') {
+    const sorted = sel.slice().sort((a,b) => tco(a) - tco(b));
+    mainChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(p => p.name),
+        datasets: [
+          { label: 'Spend at intro rate', data: sorted.map(p => +introSpend(p).toFixed(2)),
+            backgroundColor: t.seqLight, borderColor: t.surface, borderWidth: 1, maxBarThickness: 20, borderRadius: 3, borderSkipped: false },
+          { label: 'Spend at renewal rate', data: sorted.map(p => +renewSpend(p).toFixed(2)),
+            backgroundColor: t.seqDark, borderColor: t.surface, borderWidth: 1, maxBarThickness: 20, borderRadius: 3, borderSkipped: false },
+        ]
+      },
+      options: {
+        ...baseOptions(t),
+        indexAxis: 'y',
+        plugins: { ...baseOptions(t).plugins,
+          tooltip: { ...baseOptions(t).plugins.tooltip,
+            callbacks: {
+              label: c => ` ${c.dataset.label}: ${money(c.parsed.x)}`,
+              footer: items => 'Total: ' + money(items.reduce((s,i) => s + i.parsed.x, 0)),
+            } } },
+        scales: {
+          x: { stacked: true, beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
+               ticks: { font: tickFont, callback: v => money(v) } },
+          y: { stacked: true, grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
         }
+      }
+    });
+  }
 
-        function resetToRecommended() {
-            selectedIds = providers.filter(p => p.rec).map(p => p.id);
-            updateApp();
+  /* ---- 3. Intro vs renewal $/mo, grouped (one hue, two shades) ---- */
+  if (activeChart === 'introrenew') {
+    const sorted = sel.slice().sort((a,b) => hikeInfo(b).pct - hikeInfo(a).pct);
+    mainChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(p => p.name),
+        datasets: [
+          { label: 'Intro $/mo', data: sorted.map(p => p.promo),
+            backgroundColor: t.seqLight, maxBarThickness: 12, borderRadius: 3, borderSkipped: 'start' },
+          { label: 'Renewal $/mo', data: sorted.map(p => p.renewal),
+            backgroundColor: t.seqDark, maxBarThickness: 12, borderRadius: 3, borderSkipped: 'start' },
+        ]
+      },
+      options: {
+        ...baseOptions(t),
+        indexAxis: 'y',
+        plugins: { ...baseOptions(t).plugins,
+          tooltip: { ...baseOptions(t).plugins.tooltip,
+            callbacks: { label: c => ` ${c.dataset.label}: ${money2(c.parsed.x)}`,
+              afterBody: items => {
+                const p = sorted[items[0].dataIndex]; const h = hikeInfo(p);
+                return h.pct > 0 ? `Hike: +${Math.round(h.pct)}% after ${p.term} mo` : 'Flat pricing — no hike';
+              } } } },
+        scales: {
+          x: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
+               ticks: { font: tickFont, callback: v => '$' + v } },
+          y: { grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
         }
+      }
+    });
+  }
 
-        function clearAll() {
-            selectedIds = [];
-            updateApp();
+  /* ---- 4. Renewal shock scatter (status color for predatory) ---- */
+  if (activeChart === 'shock') {
+    const std = sel.filter(p => hikeInfo(p).tier !== 'predatory');
+    const bad = sel.filter(p => hikeInfo(p).tier === 'predatory');
+    const pt = p => ({ x: p.promo, y: Math.max(0, +hikeInfo(p).pct.toFixed(1)), name: p.name });
+    mainChart = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets: [
+        { label: 'Standard pricing', data: std.map(pt), backgroundColor: t.accent,
+          pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2 },
+        { label: 'Predatory intro (flagged)', data: bad.map(pt), backgroundColor: t.crit,
+          pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2, pointStyle: 'rectRot' },
+      ]},
+      options: {
+        ...baseOptions(t),
+        plugins: { ...baseOptions(t).plugins,
+          thresholdLine: { y: 100, color: t.crit, label: '100% — predatory threshold' },
+          tooltip: { ...baseOptions(t).plugins.tooltip,
+            callbacks: {
+              title: items => items[0].raw.name,
+              label: c => ` Intro ${money2(c.parsed.x)}/mo → +${c.parsed.y}% at renewal`,
+            } } },
+        scales: {
+          y: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
+               title: { display: true, text: '% increase at renewal', color: t.ink3, font: { size: 10 } },
+               ticks: { font: tickFont, callback: v => v + '%' } },
+          x: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
+               title: { display: true, text: 'Advertised intro price ($/mo)', color: t.ink3, font: { size: 10 } },
+               ticks: { font: tickFont, callback: v => '$' + v } }
         }
+      }
+    });
+  }
 
-        function calculateTCO(p) {
-            const promoMonths = p.term || 0;
-            const renewalMonths = Math.max(0, 48 - promoMonths);
-            return ((p.promo * promoMonths) + (p.renewal * renewalMonths)).toFixed(2);
+  /* ---- 5. Storage (single hue; unmetered in gray at full width) ---- */
+  if (activeChart === 'storage') {
+    const rows = sel.filter(p => p.storage != null || p.unmetered);
+    const omitted = sel.length - rows.length;
+    if (omitted > 0) {
+      note.textContent = `${omitted} usage-based plan${omitted>1?'s':''} (storage billed separately) omitted from this view — see the table for details.`;
+      note.classList.remove('hidden');
+    }
+    const maxFixed = Math.max(50, ...rows.filter(p => !p.unmetered).map(p => p.storage || 0));
+    const cap = Math.ceil(maxFixed * 1.2 / 10) * 10;
+    const sorted = rows.slice().sort((a,b) => (b.unmetered ? cap : b.storage) - (a.unmetered ? cap : a.storage));
+    mainChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(p => p.name),
+        datasets: [
+          { label: 'Fixed allocation (GB)', data: sorted.map(p => p.unmetered ? null : p.storage),
+            backgroundColor: t.accent, maxBarThickness: 18, borderRadius: 3, borderSkipped: 'start' },
+          { label: 'Unmetered (no fixed cap)', data: sorted.map(p => p.unmetered ? cap : null),
+            backgroundColor: t.ink3, maxBarThickness: 18, borderRadius: 3, borderSkipped: 'start' },
+        ]
+      },
+      options: {
+        ...baseOptions(t),
+        indexAxis: 'y',
+        skipNull: true,
+        plugins: { ...baseOptions(t).plugins,
+          tooltip: { ...baseOptions(t).plugins.tooltip,
+            callbacks: { label: c => c.datasetIndex === 1 ? ' Unmetered — fair-use policy applies' : ` ${c.parsed.x} GB included` } } },
+        scales: {
+          x: { beginAtZero: true, max: cap, grid: gridOpts, border: { color: t.baseline },
+               ticks: { font: tickFont, callback: v => v + ' GB' } },
+          y: { stacked: true, grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
         }
+      }
+    });
+  }
+}
 
-        function updateApp() {
-            document.getElementById('select-pill').innerText = `${selectedIds.length} SELECTED`;
-            renderSelector();
-            renderTable();
-            renderCharts();
-            
-            const emptyState = document.getElementById('empty-state');
-            const tableCont = document.getElementById('table-container');
-            if (selectedIds.length > 0) {
-                emptyState.classList.add('hidden');
-                tableCont.classList.remove('hidden');
-            } else {
-                emptyState.classList.remove('hidden');
-                tableCont.classList.add('hidden');
-            }
-        }
+/* ===================== MASTER RENDER ===================== */
+function updateApp() {
+  const n = selectedIds.length;
+  document.getElementById('select-pill').textContent = `${n} SELECTED`;
+  document.getElementById('provider-count').textContent = providers.length;
+  renderKpis();
+  renderAlert();
+  renderPills();
+  renderCatalog();
+  renderTable();
+  document.getElementById('charts-section').classList.toggle('hidden', n === 0);
+  document.getElementById('table-container').classList.toggle('hidden', n === 0);
+  document.getElementById('empty-state').classList.toggle('hidden', n > 0);
+  if (n > 0) renderChart();
+}
 
-        function renderSelector() {
-            const grid = document.getElementById('selection-grid');
-            const filtered = providers.filter(p => p.cat === activeTab);
-            grid.innerHTML = filtered.map(p => `
-                <div onclick="toggleProvider('${p.id}')" class="selection-card p-4 rounded-2xl glass-card cursor-pointer transition-all hover:shadow-md ${selectedIds.includes(p.id) ? 'active ring-2 ring-teal-500' : ''}">
-                    <div class="flex items-start justify-between mb-2">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${p.name}</span>
-                        <div class="w-3 h-3 border rounded-full flex items-center justify-center ${selectedIds.includes(p.id) ? 'bg-teal-500 border-teal-500' : 'border-slate-300'}">
-                            ${selectedIds.includes(p.id) ? '<span class="text-[7px] text-white">✓</span>' : ''}
-                        </div>
-                    </div>
-                    <p class="text-xs font-bold text-slate-800 leading-tight mb-1">${p.plan}</p>
-                    <p class="text-[10px] text-teal-600 font-bold">$${p.promo}/mo</p>
-                </div>
-            `).join('');
-        }
-
-        function renderTable() {
-            const body = document.getElementById('comparison-table-body');
-            const data = providers.filter(p => selectedIds.includes(p.id));
-            body.innerHTML = data.map(p => {
-                const hike = p.promo > 0 ? (((p.renewal - p.promo) / p.promo) * 100).toFixed(0) : 0;
-                return `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="p-6">
-                            <p class="text-slate-900 font-bold">${p.name}</p>
-                            <p class="text-[9px] text-slate-400 uppercase">${p.plan}</p>
-                        </td>
-                        <td class="p-6 text-slate-600 font-bold">$${p.promo}</td>
-                        <td class="p-6 text-slate-600 font-bold">$${p.renewal}</td>
-                        <td class="p-6">
-                            <span class="px-2 py-0.5 rounded text-[9px] font-black ${hike > 50 ? 'hike-badge' : 'bg-slate-100 text-slate-600'}">+${hike}% Shock</span>
-                        </td>
-                        <td class="p-6 text-[11px] text-slate-500">${p.tech}</td>
-                        <td class="p-6 font-black text-slate-800">$${calculateTCO(p)}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function renderCharts() {
-            const data = providers.filter(p => selectedIds.includes(p.id));
-            const labels = data.map(p => p.name);
-
-            // Cost Chart
-            if (charts.cost) charts.cost.destroy();
-            charts.cost = new Chart(document.getElementById('costChart'), {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '4-Year Total USD',
-                        data: data.map(p => calculateTCO(p)),
-                        backgroundColor: '#0d9488',
-                        borderRadius: 4,
-                        barThickness: 20
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
-                    }
-                }
-            });
-
-            // Limit Chart
-            if (charts.limit) charts.limit.destroy();
-            charts.limit = new Chart(document.getElementById('limitChart'), {
-                type: 'bar',
-                indexAxis: 'y',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Capacity Index',
-                        data: data.map(p => p.limit),
-                        backgroundColor: '#0f172a',
-                        borderRadius: 4,
-                        barThickness: 12
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    responsive: true,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw} ${data[ctx.dataIndex].lUnit}` } }
-                    },
-                    scales: { 
-                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                        y: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
-                    }
-                }
-            });
-        }
-
-        window.onload = () => {
-            resetToRecommended();
-        };
-    </script>
+window.onload = () => {
+  document.getElementById('theme-toggle').textContent =
+    document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+  // curated default: spans all four tiers and demos the predatory flag
+  ['hostinger-sh','namecheap-sh','siteground-sh','do-vps','hetzner-vps','kinsta-cl','lightsail-px'].forEach(id => {
+    selectedIds.push(id);
+    const used = new Set(slotMap.values());
+    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(id, s); break; }
+  });
+  updateApp();
+};
+</script>
 </body>
 </html>
