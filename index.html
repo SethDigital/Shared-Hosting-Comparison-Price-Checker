@@ -23,6 +23,7 @@
         .hike-badge { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
         .selection-card.active { border-color: var(--accent-teal); background-color: #f0fdfa; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
     </style>
 </head>
 <body class="min-h-screen pb-24">
@@ -35,12 +36,12 @@
                 <span class="text-xl font-bold tracking-tighter text-slate-800 uppercase italic">Agency<span class="text-teal-600 not-italic font-black">Nexus</span></span>
             </div>
             <div class="hidden md:flex space-x-2">
-                <button onclick="setTab('shared')" id="tab-shared" class="tab-active px-4 py-5 text-xs uppercase tracking-[0.15em] transition-all">Shared</button>
-                <button onclick="setTab('vps')" id="tab-vps" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">VPS / Managed</button>
-                <button onclick="setTab('cloud')" id="tab-cloud" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">Cloud Infrastructure</button>
+                <button onclick="setTab('shared')" id="tab-shared" class="tab-active px-4 py-5 text-xs uppercase tracking-[0.15em] transition-all">Shared / Economy</button>
+                <button onclick="setTab('vps')" id="tab-vps" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">VPS & Dedicated</button>
+                <button onclick="setTab('cloud')" id="tab-cloud" class="px-4 py-5 text-xs uppercase tracking-[0.15em] text-slate-400 hover:text-teal-600 transition-all">Cloud & Managed</button>
             </div>
             <div class="flex items-center">
-                <span id="select-pill" class="bg-teal-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-teal-100">5 SELECTED</span>
+                <span id="select-pill" class="bg-teal-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-teal-100 uppercase">0 Selected</span>
             </div>
         </div>
     </header>
@@ -49,114 +50,134 @@
         
         <!-- Intro Paragraph -->
         <div class="max-w-4xl mb-12">
-            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight leading-none">The 2026 Agency Infrastructure Audit.</h1>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight leading-none uppercase">The Global Infrastructure Nexus.</h1>
             <p class="text-lg text-slate-600 leading-relaxed max-w-3xl">
-                This hub centralizes technical research for high-volume HTML deployments. We have analyzed 15+ providers across **Shared, VPS, and Cloud** tiers. The charts below default to the industry's "Big 5" shared hosts. You can use the selection engine to add more specialized infrastructure (like DigitalOcean or Vultr) to compare raw file limits, 4-year TCO, and renewal spikes in one unified view.
+                We have expanded our database to include **25+ trusted global providers**. This tool now encompasses eco-friendly hosting, high-performance European infrastructure, and enterprise-grade cloud. Select providers from the catalogs below to live-update the TCO (Total Cost of Ownership) and technical ceiling comparisons.
             </p>
         </div>
 
-        <!-- Dashboard Charts (Default Comparison) -->
+        <!-- Dashboard Charts -->
         <div class="grid lg:grid-cols-2 gap-8 mb-16">
             <div class="glass-card p-8 rounded-3xl shadow-sm">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">48-Month Total Cost of Ownership ($)</h3>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">48-Month Total Cost Forecast ($)</h3>
                     <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Cumulative</span>
                 </div>
                 <div class="chart-container">
                     <canvas id="costChart"></canvas>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-4 leading-relaxed">Calculates (Promo Price × Duration) + (Renewal Price × Remaining 48 Months). This cuts through the "Introductory" noise to show real agency overhead.</p>
             </div>
             <div class="glass-card p-8 rounded-3xl shadow-sm">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">File Capacity (Inode Limit in Millions)</h3>
-                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Deployment Ceiling</span>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deployment Ceiling (Inodes/Resource)</h3>
+                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded">Metric Scaling</span>
                 </div>
                 <div class="chart-container">
                     <canvas id="limitChart"></canvas>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-4 leading-relaxed">The hard limit on how many individual HTML files can exist. VPS and Cloud typically offer "Unlimited" subject to disk space; Shared plans have strict ceilings.</p>
             </div>
         </div>
 
-        <!-- Selector Grid -->
+        <!-- Selector Section -->
         <div class="mb-12">
             <div class="flex items-end justify-between mb-8">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-900 mb-1">Select Providers</h2>
-                    <p class="text-sm text-slate-500">Add or remove hosts from the analytical playground above.</p>
+                    <h2 class="text-2xl font-black text-slate-900 mb-1">Infrastructure Catalog</h2>
+                    <p class="text-sm text-slate-500">Filter by tier and select your candidates.</p>
                 </div>
-                <button onclick="resetSelection()" class="text-[10px] font-bold text-rose-600 uppercase tracking-widest hover:underline">Reset to Big 5</button>
+                <div class="flex space-x-4">
+                    <button onclick="clearAll()" class="text-[10px] font-bold text-rose-600 uppercase tracking-widest hover:underline">Clear All</button>
+                    <button onclick="resetToRecommended()" class="text-[10px] font-bold text-teal-600 uppercase tracking-widest hover:underline">Agency Picks</button>
+                </div>
             </div>
             
-            <div id="selection-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div id="selection-grid" class="provider-grid">
                 <!-- Populated by JS -->
             </div>
         </div>
 
         <!-- Comparative Data Table -->
-        <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+        <div id="table-container" class="glass-card rounded-3xl overflow-hidden shadow-sm hidden">
             <div class="p-6 border-b border-slate-100 bg-white/50">
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Technical Specifications Matrix</h3>
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Technical Delta Matrix</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                         <tr>
-                            <th class="p-6">Provider / Plan</th>
-                            <th class="p-6">Promo Rate</th>
-                            <th class="p-6">Renewal Rate</th>
-                            <th class="p-6">Renewal Shock</th>
-                            <th class="p-6">Server Tech</th>
-                            <th class="p-6">Agency Verdict</th>
+                            <th class="p-6">Provider</th>
+                            <th class="p-6">Monthly (Start)</th>
+                            <th class="p-6">Monthly (Renew)</th>
+                            <th class="p-6">Price Jump</th>
+                            <th class="p-6">Tech Stack</th>
+                            <th class="p-6">4-Year TCO</th>
                         </tr>
                     </thead>
-                    <tbody id="comparison-table-body" class="text-sm">
+                    <tbody id="comparison-table-body" class="text-sm font-medium">
                         <!-- Populated by JS -->
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 glass-card rounded-3xl border-dashed border-2">
+            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Select providers above to activate the intelligence engine</p>
+        </div>
+
     </main>
 
-    <!-- Application Structure Plan: 
-        1. DESIGN PHILOSOPHY: The SPA is built as a "Nexus" Dashboard. It prioritizes clarity and immediate feedback.
-        2. DEFAULT STATE: To prevent an empty screen, the app initializes with the 5 most popular shared hosts (Hostinger, A2, etc.), providing immediate comparative value.
-        3. TIERED NAVIGATION: Tabs separate categories to allow the user to compare Shared (Landing pages) vs VPS (Complex sites) without cluttering one list.
-        4. MULTI-SELECT ENGINE: Users check/uncheck providers in the grid. JS event listeners instantly re-calculate the 48-month TCO and Inode charts.
-        5. FINANCIAL TRANSPARENCY: Every provider card and table row highlights "Renewal Shock (%)" to ensure no hidden costs impact the agency's bottom line.
+    <!-- Application Structure Plan:
+        1. EXPANDED DATASET: Now includes 25+ providers covering every 'trusted' niche (Eco, EU-centric, Managed WP, High-Performance VPS).
+        2. SMART CATEGORIZATION: Categories are refined into 'Shared/Economy', 'VPS/Dedicated', and 'Cloud/Managed' to handle the higher volume of data.
+        3. TCO NORMALIZATION: All costs are normalized to a 48-month window, even for providers that don't offer 4-year terms (simulating consecutive renewals).
+        4. DYNAMIC SCALING: Charts now support a larger number of datasets without overlapping labels, using Chart.js responsive features.
     -->
 
-    <!-- Visualization & Content Choices: 
-        - 48-Month TCO: Bar Chart. Essential for agency forecasting. Shows that a cheap start often leads to the most expensive long-term result.
-        - Inode Limit: Horizontal Bar Chart. Critical for your "HTML landing page" focus—inodes are the most common failure point for high-volume static site deployments.
-        - Selection Grid: Card-based UI with active states for easy multi-selection.
-        - Data Table: High-density data grid for deep technical audits (LiteSpeed vs Apache, etc.).
-        - Library: Chart.js (CDN) used for all Canvas rendering. NO SVG. NO Mermaid.
+    <!-- Visualization & Content Choices:
+        - Bar Charts: Used for TCO and Inode limits to show ranking clearly among a larger set.
+        - Matrix Table: High-density technical data including "Renewal Shock" percentage calculations.
+        - No SVG: Using Tailwind borders, icons, and Canvas only.
     -->
 
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
     <script>
         const providers = [
-            // Shared Tier
-            { id: 'hsg-sh', cat: 'shared', name: 'Hostinger', plan: 'Cloud Startup', promo: 7.99, renewal: 25.99, term: 48, limit: 2.0, limitUnit: 'M Inodes', tech: 'LiteSpeed Enterprise', verdict: 'Best for 4-year scale and file count.' },
-            { id: 'a2-sh', cat: 'shared', name: 'A2 Hosting', plan: 'Turbo Max', promo: 14.99, renewal: 25.99, term: 36, limit: 0.6, limitUnit: 'M Inodes', tech: 'LiteSpeed + NVMe', verdict: 'Performance king for static assets.' },
-            { id: 'sg-sh', cat: 'shared', name: 'SiteGround', plan: 'GoGeek', promo: 7.99, renewal: 44.99, term: 12, limit: 0.4, limitUnit: 'M Inodes', tech: 'Nginx / GCP', verdict: 'Avoid for mass static storage (renewal shock).' },
-            { id: 'bh-sh', cat: 'shared', name: 'Bluehost', plan: 'Pro', promo: 13.95, renewal: 28.99, term: 36, limit: 0.5, limitUnit: 'M Inodes', tech: 'Apache / NVMe', verdict: 'Reliable, legacy agency favorite.' },
-            { id: 'dh-sh', cat: 'shared', name: 'DreamHost', plan: 'Unlimited', promo: 3.95, renewal: 13.99, term: 36, limit: 0.5, limitUnit: 'M Inodes', tech: 'Apache / SSD', verdict: 'Budget-safe but technologically slower.' },
-            { id: 'nc-sh', cat: 'shared', name: 'Namecheap', plan: 'Stellar Plus', promo: 2.98, renewal: 6.48, term: 12, limit: 0.3, limitUnit: 'M Inodes', tech: 'Apache', verdict: 'Lowest entry cost for micro-projects.' },
-            // VPS Tier
-            { id: 'im-vps', cat: 'vps', name: 'InMotion', plan: 'VPS-2000', promo: 14.99, renewal: 59.99, term: 36, limit: 10, limitUnit: 'GB RAM', tech: 'KVM Managed', verdict: 'High power for agency backend tools.' },
-            { id: 'hsg-vps', cat: 'vps', name: 'Hostinger VPS', plan: 'KVM 8', promo: 21.99, renewal: 39.99, term: 24, limit: 32, limitUnit: 'GB RAM', tech: 'KVM Self-Managed', verdict: 'Unmatched raw compute for price.' },
-            { id: 'kn-cl', cat: 'cloud', name: 'Kinsta', plan: 'Starter', promo: 35.00, renewal: 35.00, term: 0, limit: 5, limitUnit: 'GB SSD', tech: 'GCP / LXD', verdict: 'Premium managed experience; zero hikes.' },
-            { id: 'do-cl', cat: 'cloud', name: 'DigitalOcean', plan: 'Basic Droplet', promo: 6.00, renewal: 6.00, term: 0, limit: 25, limitUnit: 'GB SSD', tech: 'Droplets', verdict: 'Scale developer assets with fixed pricing.' },
-            { id: 'vl-cl', cat: 'cloud', name: 'Vultr', plan: 'High Freq', promo: 6.00, renewal: 6.00, term: 0, limit: 32, limitUnit: 'GB NVMe', tech: 'NVMe Compute', verdict: 'Fastest raw I/O for HTML retrieval.' }
+            // SHARED / ECONOMY TIER
+            { id: 'hsg-sh', cat: 'shared', name: 'Hostinger', plan: 'Cloud Startup', promo: 7.99, renewal: 19.99, term: 48, limit: 2.0, lUnit: 'M Inodes', tech: 'LiteSpeed / NVMe', rec: true },
+            { id: 'a2-sh', cat: 'shared', name: 'A2 Hosting', plan: 'Turbo Max', promo: 14.99, renewal: 25.99, term: 36, limit: 0.6, lUnit: 'M Inodes', tech: 'LiteSpeed Turbo', rec: true },
+            { id: 'sg-sh', cat: 'shared', name: 'SiteGround', plan: 'GoGeek', promo: 7.99, renewal: 44.99, term: 12, limit: 0.4, lUnit: 'M Inodes', tech: 'Nginx / GCP', rec: true },
+            { id: 'bh-sh', cat: 'shared', name: 'Bluehost', plan: 'Pro', promo: 13.95, renewal: 28.99, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'Apache / SSD' },
+            { id: 'dh-sh', cat: 'shared', name: 'DreamHost', plan: 'Unlimited', promo: 3.95, renewal: 13.99, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'Apache / SSD' },
+            { id: 'nc-sh', cat: 'shared', name: 'Namecheap', plan: 'Stellar Plus', promo: 2.98, renewal: 6.48, term: 12, limit: 0.3, lUnit: 'M Inodes', tech: 'Apache / SSD' },
+            { id: 'gg-sh', cat: 'shared', name: 'GreenGeeks', plan: 'Premium', promo: 4.95, renewal: 25.95, term: 36, limit: 0.5, lUnit: 'M Inodes', tech: 'LiteSpeed / Eco' },
+            { id: 'is-sh', cat: 'shared', name: 'InterServer', plan: 'Standard', promo: 2.50, renewal: 7.00, term: 12, limit: 0.25, lUnit: 'M Inodes', tech: 'Apache' },
+            { id: 'fc-sh', cat: 'shared', name: 'FastComet', plan: 'FastCloud Extra', promo: 5.95, renewal: 19.95, term: 12, limit: 0.5, lUnit: 'M Inodes', tech: 'LiteSpeed / NVMe' },
+            { id: 'sh-sh', cat: 'shared', name: 'ScalaHosting', plan: 'Entry', promo: 2.95, renewal: 13.95, term: 36, limit: 0.4, lUnit: 'M Inodes', tech: 'SPanel / NVMe' },
+
+            // VPS & DEDICATED TIER
+            { id: 'do-vps', cat: 'vps', name: 'DigitalOcean', plan: 'Basic Droplet', promo: 6.00, renewal: 6.00, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'Droplets', rec: true },
+            { id: 'vl-vps', cat: 'vps', name: 'Vultr', plan: 'High Frequency', promo: 6.00, renewal: 6.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'NVMe Compute', rec: true },
+            { id: 'hz-vps', cat: 'vps', name: 'Hetzner', plan: 'CPX11', promo: 4.85, renewal: 4.85, term: 0, limit: 20, lUnit: 'TB BW', tech: 'KVM / EU', rec: true },
+            { id: 'li-vps', cat: 'vps', name: 'Linode', plan: 'Shared 2GB', promo: 12.00, renewal: 12.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'Akamai Cloud' },
+            { id: 'ov-vps', cat: 'vps', name: 'OVHcloud', plan: 'VPS VLE-2', promo: 4.50, renewal: 4.50, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'KVM' },
+            { id: 'im-vps', cat: 'vps', name: 'InMotion', plan: 'VPS-1000', promo: 14.99, renewal: 59.99, term: 36, limit: 4.0, lUnit: 'GB RAM', tech: 'Managed VPS' },
+            { id: 'ct-vps', cat: 'vps', name: 'Contabo', plan: 'Cloud VPS S', promo: 8.49, renewal: 8.49, term: 0, limit: 32, lUnit: 'TB BW', tech: 'German KVM' },
+            { id: 'hsg-vps', cat: 'vps', name: 'Hostinger VPS', plan: 'KVM 2', promo: 5.99, renewal: 11.99, term: 24, limit: 8.0, lUnit: 'GB RAM', tech: 'KVM Self-Managed' },
+
+            // CLOUD & MANAGED TIER
+            { id: 'ks-cl', cat: 'cloud', name: 'Kinsta', plan: 'Starter', promo: 35.00, renewal: 35.00, term: 0, limit: 25, lUnit: 'k Visits', tech: 'GCP / LXD', rec: true },
+            { id: 'we-cl', cat: 'cloud', name: 'WP Engine', plan: 'Startup', promo: 20.00, renewal: 30.00, term: 12, limit: 25, lUnit: 'k Visits', tech: 'AWS / EverCache', rec: true },
+            { id: 'cw-cl', cat: 'cloud', name: 'Cloudways', plan: 'DO-1GB', promo: 14.00, renewal: 14.00, term: 0, limit: 1.0, lUnit: 'TB BW', tech: 'VMAN Stack' },
+            { id: 'nx-cl', cat: 'cloud', name: 'Nexcess', plan: 'Spark', promo: 21.00, renewal: 21.00, term: 0, limit: 2.0, lUnit: 'TB BW', tech: 'Liquid Web Stack' },
+            { id: 'fw-cl', cat: 'cloud', name: 'Flywheel', plan: 'Tiny', promo: 13.00, renewal: 15.00, term: 12, limit: 5, lUnit: 'k Visits', tech: 'GCP Managed' },
+            { id: 'pt-cl', cat: 'cloud', name: 'Pantheon', plan: 'Basic', promo: 41.00, renewal: 41.00, term: 0, limit: 25, lUnit: 'k Visits', tech: 'Containerized' },
+            { id: 'lw-cl', cat: 'cloud', name: 'Liquid Web', plan: 'Essential', promo: 13.30, renewal: 19.00, term: 12, limit: 1.0, lUnit: 'TB BW', tech: 'Premium Managed' }
         ];
 
         let activeTab = 'shared';
-        let selectedIds = ['hsg-sh', 'a2-sh', 'sg-sh', 'bh-sh', 'dh-sh'];
+        let selectedIds = [];
         let charts = {};
 
         function setTab(tab) {
@@ -180,9 +201,13 @@
             updateApp();
         }
 
-        function resetSelection() {
-            selectedIds = ['hsg-sh', 'a2-sh', 'sg-sh', 'bh-sh', 'dh-sh'];
-            setTab('shared');
+        function resetToRecommended() {
+            selectedIds = providers.filter(p => p.rec).map(p => p.id);
+            updateApp();
+        }
+
+        function clearAll() {
+            selectedIds = [];
             updateApp();
         }
 
@@ -197,6 +222,16 @@
             renderSelector();
             renderTable();
             renderCharts();
+            
+            const emptyState = document.getElementById('empty-state');
+            const tableCont = document.getElementById('table-container');
+            if (selectedIds.length > 0) {
+                emptyState.classList.add('hidden');
+                tableCont.classList.remove('hidden');
+            } else {
+                emptyState.classList.remove('hidden');
+                tableCont.classList.add('hidden');
+            }
         }
 
         function renderSelector() {
@@ -205,13 +240,13 @@
             grid.innerHTML = filtered.map(p => `
                 <div onclick="toggleProvider('${p.id}')" class="selection-card p-4 rounded-2xl glass-card cursor-pointer transition-all hover:shadow-md ${selectedIds.includes(p.id) ? 'active ring-2 ring-teal-500' : ''}">
                     <div class="flex items-start justify-between mb-2">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${p.name}</span>
-                        <div class="w-4 h-4 border-2 rounded-full flex items-center justify-center ${selectedIds.includes(p.id) ? 'bg-teal-500 border-teal-500' : 'border-slate-300'}">
-                            ${selectedIds.includes(p.id) ? '<span class="text-[8px] text-white">✓</span>' : ''}
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${p.name}</span>
+                        <div class="w-3 h-3 border rounded-full flex items-center justify-center ${selectedIds.includes(p.id) ? 'bg-teal-500 border-teal-500' : 'border-slate-300'}">
+                            ${selectedIds.includes(p.id) ? '<span class="text-[7px] text-white">✓</span>' : ''}
                         </div>
                     </div>
-                    <p class="text-sm font-bold text-slate-800">${p.plan}</p>
-                    <p class="text-xs text-teal-600 font-medium">$${p.promo}/mo</p>
+                    <p class="text-xs font-bold text-slate-800 leading-tight mb-1">${p.plan}</p>
+                    <p class="text-[10px] text-teal-600 font-bold">$${p.promo}/mo</p>
                 </div>
             `).join('');
         }
@@ -224,16 +259,16 @@
                 return `
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td class="p-6">
-                            <p class="font-bold text-slate-900">${p.name}</p>
-                            <p class="text-[10px] text-slate-400 uppercase font-black">${p.plan}</p>
+                            <p class="text-slate-900 font-bold">${p.name}</p>
+                            <p class="text-[9px] text-slate-400 uppercase">${p.plan}</p>
                         </td>
-                        <td class="p-6 font-bold text-slate-600">$${p.promo}</td>
-                        <td class="p-6 font-bold text-slate-600">$${p.renewal}</td>
+                        <td class="p-6 text-slate-600 font-bold">$${p.promo}</td>
+                        <td class="p-6 text-slate-600 font-bold">$${p.renewal}</td>
                         <td class="p-6">
-                            <span class="px-2 py-1 rounded text-[10px] font-black ${hike > 50 ? 'hike-badge' : 'bg-slate-100 text-slate-600'}">+${hike}% Jump</span>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-black ${hike > 50 ? 'hike-badge' : 'bg-slate-100 text-slate-600'}">+${hike}% Shock</span>
                         </td>
-                        <td class="p-6 text-xs text-slate-500 font-medium">${p.tech}</td>
-                        <td class="p-6 text-xs italic text-slate-400">${p.verdict}</td>
+                        <td class="p-6 text-[11px] text-slate-500">${p.tech}</td>
+                        <td class="p-6 font-black text-slate-800">$${calculateTCO(p)}</td>
                     </tr>
                 `;
             }).join('');
@@ -250,18 +285,21 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '48m Cumulative Cost',
+                        label: '4-Year Total USD',
                         data: data.map(p => calculateTCO(p)),
                         backgroundColor: '#0d9488',
-                        borderRadius: 6,
-                        barThickness: 32
+                        borderRadius: 4,
+                        barThickness: 20
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } } }
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
+                    }
                 }
             });
 
@@ -273,23 +311,31 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Inode Limit (Millions)',
+                        label: 'Capacity Index',
                         data: data.map(p => p.limit),
                         backgroundColor: '#0f172a',
                         borderRadius: 4,
-                        barThickness: 16
+                        barThickness: 12
                     }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, y: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw} ${data[ctx.dataIndex].lUnit}` } }
+                    },
+                    scales: { 
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                        y: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
+                    }
                 }
             });
         }
 
-        window.onload = () => updateApp();
+        window.onload = () => {
+            resetToRecommended();
+        };
     </script>
 </body>
 </html>
