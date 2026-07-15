@@ -985,4 +985,140 @@ function renderChart() {
 const REC_STEPS = {
   sites:   [1, 2, 3, 5, 10, 25, 50, 100],
   storage: [5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500],
-  views:   [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000
+  views:   [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000],
+  budget:  [3, 5, 7, 10, 12, 15, 20, 25, 30, 40, 50, 75, 100],
+};
+let recHorizon = 36;
+const fmtViews = v => v >= 1e6 ? (v / 1e6) + 'M' : Math.round(v / 1e3) + 'k';
+const fmtCap = v => v === Infinity ? 'no set cap' : v.toLocaleString();
+const costOver = (p, H) => p.term > 0
+  ? p.promo * Math.min(p.term, H) + p.renewal * Math.max(0, H - p.term)
+  : p.renewal * H;
+
+function recVals() {
+  const g = id => +document.getElementById(id).value;
+  return {
+    sites:  REC_STEPS.sites[g('rec-sites')],
+    gb:     REC_STEPS.storage[g('rec-storage')],
+    views:  REC_STEPS.views[g('rec-views')],
+    budget: REC_STEPS.budget[g('rec-budget')],
+  };
+}
+function setHorizon(h) {
+  recHorizon = h;
+  [24, 36].forEach(x => document.getElementById('rec-h-' + x).classList.toggle('active', x === h));
+  updateRec();
+}
+
+function updateRec() {
+  const { sites, gb, views, budget } = recVals();
+  document.getElementById('rec-sites-val').textContent = sites + (sites > 1 ? ' sites' : ' site');
+  document.getElementById('rec-storage-val').textContent = gb + ' GB';
+  document.getElementById('rec-views-val').textContent = '~' + fmtViews(views) + '/mo';
+  document.getElementById('rec-budget-val').textContent = '$' + budget + '/mo';
+
+  const H = recHorizon;
+  const storeCap = p => (p.unmetered || p.storage == null) ? Infinity : p.storage;
+  const fits = providers.filter(p => p.maxSites >= sites && storeCap(p) >= gb && p.visits >= views);
+  const pool = fits.filter(p => costOver(p, H) / H <= budget);
+  const box = document.getElementById('rec-result');
+
+  if (!fits.length) {
+    box.innerHTML = `<div class="rounded-2xl p-5 text-center" style="border:1px dashed var(--baseline)">
+      <p class="text-xs ink3 font-bold">No host in the catalog meets that combination — try lowering the traffic or storage requirement.</p></div>`;
+    return;
+  }
+  if (!pool.length) {
+    const near = fits.slice().sort((a, b) => costOver(a, H) - costOver(b, H))[0];
+    const nAvg = costOver(near, H) / H;
+    box.innerHTML = `<div class="rounded-2xl p-5" style="border:1px dashed var(--baseline)">
+      <p class="text-xs ink2 font-bold mb-1">Nothing fits $${budget}/mo once renewal rates are averaged over ${H} months.</p>
+      <p class="text-xs ink3">Closest match: <strong class="ink1">${near.name}</strong> (${near.plan}) at ${money2(nAvg)}/mo averaged — <button class="btn-ghost" style="color:var(--accent)" onclick="showDetails('${near.id}')">view details</button> or raise the budget slider.</p></div>`;
+    return;
+  }
+
+  // Rank: cost over horizon 45%, performance index 40%, uptime SLA 15% — all
+  // normalized within the qualifying pool. Transparent, fixed weights.
+  const avgs = pool.map(p => costOver(p, H) / H);
+  const speeds = pool.map(p => p.speed), ups = pool.map(p => p.uptime);
+  const lo = a => Math.min(...a), hi = a => Math.max(...a);
+  const norm = (v, l, h, inv) => h === l ? 100 : (inv ? (h - v) : (v - l)) / (h - l) * 100;
+  const scored = pool.map((p, i) => ({
+    p, avg: avgs[i],
+    score: 0.45 * norm(avgs[i], lo(avgs), hi(avgs), true)
+         + 0.40 * norm(p.speed, lo(speeds), hi(speeds), false)
+         + 0.15 * norm(p.uptime, lo(ups), hi(ups), false),
+  })).sort((a, b) => b.score - a.score || a.avg - b.avg);
+
+  const w = scored[0], p = w.p, h = hikeInfo(p);
+  const total = costOver(p, H);
+  const runners = scored.slice(1, 3);
+  const inCompare = selectedIds.includes(p.id);
+  const check = txt => `<li class="text-xs ink2 flex gap-2"><span style="color:var(--good-deep)" class="font-bold">✓</span><span>${txt}</span></li>`;
+
+  box.innerHTML = `
+  <div class="rounded-2xl p-5" style="border:2px solid var(--accent); background:var(--accent-soft)">
+    <div class="flex flex-wrap justify-between gap-4">
+      <div class="min-w-0">
+        <p class="text-[10px] font-black uppercase tracking-widest mb-1" style="color:var(--accent)">★ Best match</p>
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <h3 class="text-xl font-black ink1">${p.name}</h3>
+          <span class="text-xs ink3">${p.plan}</span>
+          ${badgeHtml(p)}
+        </div>
+        <ul class="space-y-1 mt-2">
+          ${check(`Hosts your ${sites > 1 ? sites + ' sites' : 'site'} — plan allows ${fmtCap(p.maxSites)}`)}
+          ${check(`Storage: ${METRICS.storage.fmt(p)} vs your ${gb} GB need`)}
+          ${check(`Traffic: handles ~${p.visits === Infinity ? 'unmetered' : fmtViews(p.visits) + '/mo'} (our estimate) vs your ~${fmtViews(views)}/mo`)}
+          ${check(`Performance index ${p.speed}/100 (our score) · ${p.uptime}% advertised uptime SLA`)}
+        </ul>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="text-2xl font-bold ink1">${money(total)}</p>
+        <p class="text-[10px] ink3 mb-1">total over ${H} months</p>
+        <p class="text-sm font-bold ink1 num">${money2(w.avg)}/mo <span class="font-normal ink3">avg</span></p>
+        <p class="text-[10px] ink3">vs your $${budget}/mo budget</p>
+        <p class="text-[10px] ink3 mt-1">${p.term > 0 ? `includes ${Math.max(0, H - p.term)} months at the ${money2(p.renewal)} renewal rate` : 'flat pricing — no renewal spike'}</p>
+      </div>
+    </div>
+    ${h.tier === 'predatory' ? `<p class="text-[11px] mt-3 rounded-lg px-3 py-2" style="background:var(--crit-bg); color:var(--crit-deep)"><strong>⚠ Heads up:</strong> this plan carries our predatory-intro flag (+${Math.round(h.pct)}% at renewal) — it still wins on your inputs because the horizon math prices that jump in.</p>` : ''}
+    <div class="flex flex-wrap items-center gap-3 mt-4">
+      <button class="py-2 px-4 rounded-xl font-bold text-xs text-white" style="background:var(--accent)"
+        onclick="${inCompare ? '' : `toggleProvider('${p.id}');`} document.getElementById('charts-section').scrollIntoView({behavior:'smooth'})">
+        ${inCompare ? 'In comparison — view charts' : 'Add to comparison'}</button>
+      <button class="btn-detail" onclick="showDetails('${p.id}')">Full profile →</button>
+      ${runners.length ? `<span class="text-[10px] ink3 ml-auto">Runners-up:
+        ${runners.map(r => `<button class="font-bold underline decoration-dotted" style="color:var(--accent)" onclick="showDetails('${r.p.id}')">${r.p.name}</button> (${money2(r.avg)}/mo avg)`).join(' · ')}</span>` : ''}
+    </div>
+    <p class="text-[9px] ink3 mt-3">Ranked by our fixed formula — average cost over your horizon (45%), performance index (40%), advertised uptime SLA (15%) — among the ${pool.length} host${pool.length > 1 ? 's' : ''} meeting every requirement. Capacity figures are estimates; verify with the provider.</p>
+  </div>`;
+}
+
+/* ===================== MASTER RENDER ===================== */
+function updateApp() {
+  const n = selectedIds.length;
+  document.getElementById('select-pill').textContent = `${n} SELECTED`;
+  document.getElementById('provider-count').textContent = providers.length;
+  renderKpis();
+  renderAlert();
+  renderPills();
+  renderCatalog();
+  renderTable();
+  renderMetricPills();
+  updateRec();
+  document.getElementById('charts-section').classList.toggle('hidden', n === 0);
+  document.getElementById('table-container').classList.toggle('hidden', n === 0);
+  document.getElementById('empty-state').classList.toggle('hidden', n > 0);
+  if (n > 0) renderChart();
+}
+
+window.onload = () => {
+  document.getElementById('theme-toggle').textContent =
+    document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+  // curated default: spans all four tiers and demos the predatory flag
+  selectedIds = ['hostinger-sh','namecheap-sh','siteground-sh','do-vps','hetzner-vps','kinsta-cl','lightsail-px'];
+  updateApp();
+};
+</script>
+</body>
+</html>
