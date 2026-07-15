@@ -97,7 +97,9 @@
   .badge-eco       { color: var(--good-deep); background: var(--good-bg); }
   .badge-pick      { color: var(--accent);    background: var(--accent-soft); }
 
-  .provider-card { cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .15s; border-radius: 16px; }
+  /* min-width:0 lets cards shrink below the min-content width of their
+     single-line truncated blurb — without it the grid tracks blow out. */
+  .provider-card { cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .15s; border-radius: 16px; min-width: 0; overflow: hidden; }
   .provider-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-1px); }
   .provider-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
@@ -118,10 +120,33 @@
   .search-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
   .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); }
-  .provider-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .provider-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; }
   .kpi-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
   ::-webkit-scrollbar { height: 8px; width: 8px; }
   ::-webkit-scrollbar-thumb { background: var(--baseline); border-radius: 4px; }
+
+  /* Metric toggle pills (master chart) */
+  .metric-pill { display:inline-flex; align-items:center; gap:7px; }
+  .metric-pill .swatch { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .metric-pill:not(.active) { opacity:.55; }
+  .metric-pill:not(.active) .swatch { background: transparent !important; outline: 1.5px solid var(--baseline); }
+
+  /* Best-match finder */
+  .rec-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; }
+  input[type="range"] { width:100%; accent-color: var(--accent); }
+
+  /* Chart swipes horizontally on small screens instead of squishing */
+  .chart-scroll { overflow-x:auto; }
+
+  @media (max-width: 640px) {
+    body { overflow-x: hidden; }
+    main { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.75rem !important; line-height: 1.2 !important; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .provider-grid { grid-template-columns: 1fr; }
+    .rec-grid { grid-template-columns: 1fr; }
+    #chart-holder { min-width: 560px; }
+  }
 </style>
 </head>
 <body class="min-h-screen pb-24">
@@ -170,25 +195,68 @@
     </div>
   </div>
 
+  <!-- ============ BEST-MATCH FINDER ============ -->
+  <section class="mb-14">
+    <div class="mb-5">
+      <h2 class="text-2xl font-black ink1 mb-1">Best-match finder</h2>
+      <p class="text-sm ink3">Tell us what you need — we rank every host against it, with renewal-rate spikes priced in.</p>
+    </div>
+    <div class="card rounded-3xl p-5 md:p-8">
+      <div class="rec-grid mb-5">
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[10px] font-black ink3 uppercase tracking-widest" for="rec-sites">Websites</label>
+            <span id="rec-sites-val" class="text-xs font-bold ink1 num"></span>
+          </div>
+          <input type="range" id="rec-sites" min="0" max="7" step="1" value="0" oninput="updateRec()">
+        </div>
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[10px] font-black ink3 uppercase tracking-widest" for="rec-storage">Storage needed</label>
+            <span id="rec-storage-val" class="text-xs font-bold ink1 num"></span>
+          </div>
+          <input type="range" id="rec-storage" min="0" max="10" step="1" value="2" oninput="updateRec()">
+        </div>
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[10px] font-black ink3 uppercase tracking-widest" for="rec-views">Monthly page views</label>
+            <span id="rec-views-val" class="text-xs font-bold ink1 num"></span>
+          </div>
+          <input type="range" id="rec-views" min="0" max="8" step="1" value="3" oninput="updateRec()">
+        </div>
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <label class="text-[10px] font-black ink3 uppercase tracking-widest" for="rec-budget">Budget</label>
+            <span id="rec-budget-val" class="text-xs font-bold ink1 num"></span>
+          </div>
+          <input type="range" id="rec-budget" min="0" max="12" step="1" value="5" oninput="updateRec()">
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mb-6 flex-wrap">
+        <span class="text-[10px] font-black ink3 uppercase tracking-widest">Budget horizon</span>
+        <button id="rec-h-24" class="pill" onclick="setHorizon(24)">2 years</button>
+        <button id="rec-h-36" class="pill active" onclick="setHorizon(36)">3 years</button>
+        <span class="text-[10px] ink3">— budget is checked against the <em>average</em> monthly cost across the whole horizon, so post-promo renewal rates count.</span>
+      </div>
+      <div id="rec-result"></div>
+    </div>
+  </section>
+
   <!-- ============ CHARTS ============ -->
   <section id="charts-section" class="mb-14 hidden">
     <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
       <div>
-        <h2 class="text-2xl font-black ink1 mb-1">Visual comparisons</h2>
-        <p class="text-sm ink3">Five views of the same selection — pick the one that speaks to you.</p>
+        <h2 class="text-2xl font-black ink1 mb-1">Master comparison chart</h2>
+        <p class="text-sm ink3">One chart, every metric — toggle the ones that matter to you. Swipe sideways on mobile.</p>
       </div>
     </div>
-    <div class="flex gap-2 mb-4 overflow-x-auto pb-1" id="chart-tabs">
-      <button class="chart-tab active" data-chart="timeline" onclick="setChart('timeline')">📈 Cost timeline</button>
-      <button class="chart-tab" data-chart="tco" onclick="setChart('tco')">💰 4-year TCO</button>
-      <button class="chart-tab" data-chart="introrenew" onclick="setChart('introrenew')">🏷 Intro vs renewal</button>
-      <button class="chart-tab" data-chart="shock" onclick="setChart('shock')">⚡ Renewal shock</button>
-      <button class="chart-tab" data-chart="storage" onclick="setChart('storage')">💾 Storage</button>
-    </div>
-    <div class="card rounded-3xl p-6 md:p-8">
-      <p id="chart-caption" class="text-xs ink3 mb-5 leading-relaxed max-w-3xl"></p>
-      <div id="chart-holder" style="position:relative; width:100%; height:420px;">
-        <canvas id="mainChart"></canvas>
+    <div class="flex gap-2 mb-4 flex-wrap" id="metric-pills"></div>
+    <div class="card rounded-3xl p-5 md:p-8">
+      <p id="chart-caption" class="text-xs ink3 mb-5 leading-relaxed max-w-3xl">Scores are relative to your current selection: 100 = best on that metric. Price metrics are inverted so a longer bar is always better (cheapest = 100). Hover any bar for the real dollars, gigabytes, and percentages. † Performance index is AgencyNexus's own editorial score.</p>
+      <div class="chart-scroll">
+        <div id="chart-holder" style="position:relative; width:100%; height:420px;">
+          <canvas id="mainChart"></canvas>
+        </div>
       </div>
       <p id="chart-note" class="text-[11px] ink3 mt-4 hidden"></p>
     </div>
@@ -239,7 +307,7 @@
   <!-- ============ FOOTER / METHODOLOGY ============ -->
   <footer class="mt-14 text-xs ink3 leading-relaxed max-w-4xl space-y-2">
     <p><strong class="ink2">How we flag pricing.</strong> The badges on this site are AgencyNexus's own classifications — our opinion, applied by a fixed formula, not statements of fact about any provider's conduct or intent. TCO is normalized to a 48-month window: intro price × promo term, plus renewal price × remaining months. We label a plan <strong style="color:var(--crit-deep)">predatory-intro</strong> when its renewal runs ≥100% <em>and</em> ≥$5/mo above the intro rate; <strong style="color:var(--warn-deep)">steep</strong> at 50–99%; and <strong style="color:var(--good-deep)">✓ flat</strong> when there is no teaser increase. These are structural descriptions of the pricing math; reasonable people may weigh the tradeoffs differently.</p>
-    <p><strong class="ink2">Data &amp; accuracy.</strong> Prices are a manually compiled snapshot of publicly listed rates (July 2026) and may be incomplete, out of date, or inaccurate; promotional rates change frequently. Always confirm current pricing on the provider's own site before purchasing — do not rely on this tool as the basis for a buying decision. The catalog is data-driven: to add or correct a host, edit its entry in the <code>providers</code> array.</p>
+    <p><strong class="ink2">Data &amp; accuracy.</strong> Prices are a manually compiled snapshot of publicly listed rates (July 2026) and may be incomplete, out of date, or inaccurate; promotional rates change frequently. Always confirm current pricing on the provider's own site before purchasing — do not rely on this tool as the basis for a buying decision. Traffic-capacity figures and the 0–100 performance index are AgencyNexus's own editorial estimates; uptime percentages are each provider's advertised SLA or guarantee, not measured availability. The catalog is data-driven: to add or correct a host, edit its entry in the <code>providers</code> array.</p>
     <p><strong class="ink2">Trademarks &amp; independence.</strong> Provider and plan names are trademarks of their respective owners, referenced here nominatively for identification and comparison only. AgencyNexus is independent and is not affiliated with, endorsed by, or sponsored by any provider listed, and — as of this snapshot — earns no affiliate commission on these listings. Nothing here is legal, financial, or purchasing advice.</p>
   </footer>
 </main>
@@ -477,6 +545,67 @@ const providers = [
     cons:['Overage fees beyond quotas','Backend needs external services','Costs balloon at high traffic'] },
 ];
 
+/* Structured capability data, merged into each provider record.
+   maxSites / visits: plan allowances where published, otherwise AgencyNexus's
+   own estimates (Infinity = no set cap). speed: AgencyNexus performance index,
+   0–100 — our editorial score, not a benchmark. uptime: the provider's own
+   advertised uptime SLA or guarantee (%). */
+const EXTRAS = {
+  'hostinger-sh':  { maxSites:100,      visits:25000,    speed:74, uptime:99.9  },
+  'bluehost-sh':   { maxSites:Infinity, visits:25000,    speed:62, uptime:99.9  },
+  'siteground-sh': { maxSites:Infinity, visits:100000,   speed:80, uptime:99.99 },
+  'dreamhost-sh':  { maxSites:Infinity, visits:30000,    speed:63, uptime:100   },
+  'hostgator-sh':  { maxSites:Infinity, visits:25000,    speed:58, uptime:99.9  },
+  'godaddy-sh':    { maxSites:10,       visits:25000,    speed:60, uptime:99.9  },
+  'namecheap-sh':  { maxSites:Infinity, visits:20000,    speed:61, uptime:99.9  },
+  'a2-sh':         { maxSites:Infinity, visits:40000,    speed:76, uptime:99.9  },
+  'greengeeks-sh': { maxSites:Infinity, visits:35000,    speed:71, uptime:99.9  },
+  'interserver-sh':{ maxSites:Infinity, visits:25000,    speed:65, uptime:99.9  },
+  'fastcomet-sh':  { maxSites:Infinity, visits:35000,    speed:72, uptime:99.9  },
+  'scala-sh':      { maxSites:1,        visits:30000,    speed:70, uptime:99.9  },
+  'hostwinds-sh':  { maxSites:1,        visits:25000,    speed:64, uptime:99.99 },
+  'ionos-sh':      { maxSites:Infinity, visits:30000,    speed:66, uptime:99.9  },
+  'chemicloud-sh': { maxSites:Infinity, visits:35000,    speed:73, uptime:99.99 },
+  'hostarmada-sh': { maxSites:Infinity, visits:35000,    speed:72, uptime:99.9  },
+  'inmotion-sh':   { maxSites:50,       visits:40000,    speed:68, uptime:99.9  },
+  'hostpapa-sh':   { maxSites:Infinity, visits:25000,    speed:60, uptime:99.9  },
+  'do-vps':        { maxSites:Infinity, visits:60000,    speed:82, uptime:99.99 },
+  'vultr-vps':     { maxSites:Infinity, visits:70000,    speed:84, uptime:100   },
+  'linode-vps':    { maxSites:Infinity, visits:100000,   speed:82, uptime:99.99 },
+  'hetzner-vps':   { maxSites:Infinity, visits:120000,   speed:88, uptime:99.9  },
+  'ovh-vps':       { maxSites:Infinity, visits:60000,    speed:78, uptime:99.9  },
+  'contabo-vps':   { maxSites:Infinity, visits:150000,   speed:72, uptime:99.9  },
+  'hostinger-vps': { maxSites:Infinity, visits:200000,   speed:80, uptime:99.9  },
+  'kamatera-vps':  { maxSites:Infinity, visits:90000,    speed:81, uptime:99.95 },
+  'upcloud-vps':   { maxSites:Infinity, visits:70000,    speed:89, uptime:100   },
+  'racknerd-vps':  { maxSites:Infinity, visits:80000,    speed:70, uptime:99.9  },
+  'hostwinds-vps': { maxSites:Infinity, visits:50000,    speed:75, uptime:99.99 },
+  'scala-vps':     { maxSites:Infinity, visits:100000,   speed:83, uptime:99.9  },
+  'inmotion-vps':  { maxSites:Infinity, visits:120000,   speed:78, uptime:99.99 },
+  'ionos-vps':     { maxSites:Infinity, visits:30000,    speed:68, uptime:99.9  },
+  'kinsta-cl':     { maxSites:1,        visits:25000,    speed:92, uptime:99.9  },
+  'wpengine-cl':   { maxSites:1,        visits:25000,    speed:90, uptime:99.95 },
+  'cloudways-cl':  { maxSites:Infinity, visits:60000,    speed:84, uptime:99.99 },
+  'nexcess-cl':    { maxSites:1,        visits:Infinity, speed:82, uptime:99.99 },
+  'flywheel-cl':   { maxSites:1,        visits:5000,     speed:85, uptime:99.9  },
+  'pantheon-cl':   { maxSites:1,        visits:25000,    speed:91, uptime:99.95 },
+  'liquidweb-cl':  { maxSites:1,        visits:60000,    speed:83, uptime:100   },
+  'rocket-cl':     { maxSites:1,        visits:250000,   speed:95, uptime:99.99 },
+  'pressable-cl':  { maxSites:1,        visits:30000,    speed:88, uptime:100   },
+  'wpx-cl':        { maxSites:5,        visits:100000,   speed:86, uptime:99.95 },
+  'dreampress-cl': { maxSites:1,        visits:100000,   speed:80, uptime:100   },
+  'wpcom-cl':      { maxSites:1,        visits:Infinity, speed:87, uptime:99.9  },
+  'lightsail-px':  { maxSites:Infinity, visits:60000,    speed:80, uptime:99.99 },
+  'gcp-px':        { maxSites:Infinity, visits:80000,    speed:85, uptime:99.95 },
+  'azure-px':      { maxSites:Infinity, visits:70000,    speed:83, uptime:99.95 },
+  'fly-px':        { maxSites:Infinity, visits:60000,    speed:84, uptime:99.9  },
+  'render-px':     { maxSites:Infinity, visits:50000,    speed:82, uptime:99.95 },
+  'railway-px':    { maxSites:Infinity, visits:50000,    speed:83, uptime:99.9  },
+  'heroku-px':     { maxSites:Infinity, visits:50000,    speed:78, uptime:99.95 },
+  'vercel-px':     { maxSites:Infinity, visits:200000,   speed:90, uptime:99.99 },
+};
+providers.forEach(p => Object.assign(p, EXTRAS[p.id]));
+
 const CATS = {
   all:     { label:'All tiers' },
   shared:  { label:'Shared & Economy' },
@@ -484,13 +613,9 @@ const CATS = {
   managed: { label:'Managed & Cloud WP' },
   paas:    { label:'Hyperscale & PaaS' },
 };
-const MAX_LINES = 8; // categorical series ceiling for the timeline
-
 /* ===================== STATE ===================== */
 let activeCat = 'all';
-let activeChart = 'timeline';
 let selectedIds = [];                 // selection order preserved
-const slotMap = new Map();            // providerId -> categorical slot (0-7), stable while selected
 let mainChart = null;
 let sortKey = 'tco', sortDir = 1;
 
@@ -558,26 +683,15 @@ function toggleTheme() {
 
 /* ===================== SELECTION ===================== */
 function toggleProvider(id) {
-  if (selectedIds.includes(id)) {
-    selectedIds = selectedIds.filter(i => i !== id);
-    slotMap.delete(id);
-  } else {
-    selectedIds.push(id);
-    const used = new Set(slotMap.values());
-    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(id, s); break; }
-  }
+  if (selectedIds.includes(id)) selectedIds = selectedIds.filter(i => i !== id);
+  else selectedIds.push(id);
   updateApp();
 }
 function resetToRecommended() {
-  selectedIds = []; slotMap.clear();
-  providers.filter(p => p.rec).forEach(p => {
-    selectedIds.push(p.id);
-    const used = new Set(slotMap.values());
-    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(p.id, s); break; }
-  });
+  selectedIds = providers.filter(p => p.rec).map(p => p.id);
   updateApp();
 }
-function clearAll() { selectedIds = []; slotMap.clear(); updateApp(); }
+function clearAll() { selectedIds = []; updateApp(); }
 
 /* ===================== KPI ROW ===================== */
 function renderKpis() {
@@ -635,29 +749,29 @@ function renderCatalog() {
   grid.innerHTML = list.map(p => {
     const sel = selectedIds.includes(p.id);
     return `
-    <div class="provider-card card p-5 ${sel ? 'selected' : ''}" onclick="toggleProvider('${p.id}')">
-      <div class="flex items-start justify-between mb-2">
-        <div>
-          <p class="font-black ink1 text-sm leading-tight">${p.name}</p>
-          <p class="text-[11px] ink3">${p.plan}</p>
+    <div class="provider-card card p-3 ${sel ? 'selected' : ''}" onclick="toggleProvider('${p.id}')">
+      <div class="flex items-start justify-between gap-2 mb-1">
+        <div class="min-w-0">
+          <p class="font-black ink1 text-[13px] leading-tight truncate">${p.name}</p>
+          <p class="text-[10px] ink3 truncate">${p.plan}</p>
         </div>
-        <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5"
+        <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
              style="border-color:${sel ? 'var(--accent)' : 'var(--baseline)'}; background:${sel ? 'var(--accent)' : 'transparent'}">
           ${sel ? '<span class="text-[9px] text-white font-bold">✓</span>' : ''}
         </div>
       </div>
-      <div class="flex items-baseline gap-2 mb-1">
-        <span class="text-xl font-bold ink1 num">${money2(p.promo)}</span>
-        <span class="text-[10px] ink3">/mo intro</span>
+      <div class="flex items-baseline gap-1.5">
+        <span class="text-base font-bold ink1 num">${money2(p.promo)}</span>
+        <span class="text-[9px] ink3">/mo intro</span>
       </div>
-      <p class="text-[11px] ink3 mb-2 num">renews at ${money2(p.renewal)}/mo${p.term ? ` after ${p.term} mo` : ''}</p>
-      <div class="flex flex-wrap gap-1 mb-3">
+      <p class="text-[9px] ink3 num mb-1.5">renews ${money2(p.renewal)}/mo${p.term ? ` · ${p.term} mo term` : ''}</p>
+      <div class="flex flex-wrap gap-1 mb-1.5">
         ${badgeHtml(p)}
-        ${p.eco ? '<span class="badge badge-eco">🌱 Green</span>' : ''}
-        ${p.rec ? '<span class="badge badge-pick">★ Agency pick</span>' : ''}
+        ${p.eco ? '<span class="badge badge-eco" title="Green / renewable-powered hosting">🌱</span>' : ''}
+        ${p.rec ? '<span class="badge badge-pick" title="Agency pick">★</span>' : ''}
       </div>
-      <p class="text-[11px] ink2 leading-snug mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.blurb}</p>
-      <button class="btn-detail" onclick="event.stopPropagation(); showDetails('${p.id}')">Details →</button>
+      <p class="text-[10px] ink2 leading-snug truncate mb-1.5" title="${p.blurb.replace(/"/g,'&quot;')}">${p.blurb}</p>
+      <button class="btn-detail" style="padding:2px 8px; font-size:10px;" onclick="event.stopPropagation(); showDetails('${p.id}')">Details →</button>
     </div>`;
   }).join('');
 }
@@ -761,285 +875,114 @@ function renderTable() {
     </tr>`).join('');
 }
 
-/* ===================== CHARTS ===================== */
-const CAPTIONS = {
-  timeline:  'Cumulative spend from month 0 to 48. Kinks in a line mark the moment an introductory term expires and the renewal rate kicks in — the steeper the bend, the harder the hike.',
-  tco:       'Total 4-year cost, split into spend billed at the intro rate (light) and at the renewal/standard rate (dark). Sorted cheapest first. A mostly-dark bar means the advertised teaser barely matters; flat-priced plans are fully dark by definition.',
-  introrenew:'The advertised intro price (light) beside the renewal price you’ll actually pay (dark), per provider. Wide gaps between the pair are where budgets go to die.',
-  shock:     'Each dot is a provider: advertised intro price (x) versus the percentage jump at renewal (y). Dots above the dashed line meet our predatory-intro rule (≥100% and a ≥$5/mo jump) — our formula-based read of the price gap, not a claim about the provider.',
-  storage:   'Included storage per plan, in GB. Unmetered plans are drawn full-width in gray — no fixed cap, subject to fair-use policies. Usage-based plans (some PaaS) are omitted.',
+/* ===================== MASTER CHART ===================== */
+/* Every metric is normalized to a 0-100 score relative to the current
+   selection (price metrics inverted: cheapest = 100) so unlike units can
+   share ONE axis — raw values live in the tooltips and the table. */
+let activeMetrics = new Set(['intro','renewal','storage','speed']);
+const METRIC_ORDER = ['intro','renewal','eff','storage','speed','uptime','mb'];
+const METRICS = {
+  intro:   { label:'Intro price',        slot:0, better:'low',  raw:p=>p.promo,       fmt:p=>money2(p.promo)+'/mo' },
+  renewal: { label:'Renewal price',      slot:1, better:'low',  raw:p=>p.renewal,     fmt:p=>money2(p.renewal)+'/mo' },
+  eff:     { label:'Eff. $/mo (48-mo)',  slot:2, better:'low',  raw:p=>effMonthly(p), fmt:p=>money2(effMonthly(p))+'/mo avg' },
+  storage: { label:'Storage',            slot:3, better:'high', raw:p=>(p.unmetered || p.storage==null) ? Infinity : p.storage,
+             fmt:p=>p.unmetered ? 'Unmetered' : (p.storage==null ? 'Usage-based' : p.storage+' GB') },
+  speed:   { label:'Performance idx†',   slot:4, better:'high', raw:p=>p.speed,       fmt:p=>p.speed+'/100 (our editorial index)' },
+  uptime:  { label:'Uptime SLA',         slot:5, better:'high', raw:p=>p.uptime,      fmt:p=>p.uptime+'% advertised' },
+  mb:      { label:'Money-back',         slot:6, better:'high', raw:p=>p.mb,          fmt:p=>p.mb ? p.mb+' days' : 'None' },
 };
-const thresholdLine = {
-  id: 'thresholdLine',
-  afterDraw(chart, args, opts) {
-    if (!opts || opts.y == null || !chart.scales.y) return;
-    const yPix = chart.scales.y.getPixelForValue(opts.y);
-    const { left, right } = chart.chartArea;
-    if (yPix < chart.chartArea.top || yPix > chart.chartArea.bottom) return;
-    const c = chart.ctx;
-    c.save();
-    c.strokeStyle = opts.color; c.lineWidth = 1; c.setLineDash([5,4]);
-    c.beginPath(); c.moveTo(left, yPix); c.lineTo(right, yPix); c.stroke();
-    c.setLineDash([]);
-    c.fillStyle = opts.color; c.font = '700 10px system-ui';
-    c.fillText(opts.label, left + 6, yPix - 6);
-    c.restore();
-  }
-};
-Chart.register(thresholdLine);
 
-function setChart(type) {
-  activeChart = type;
-  document.querySelectorAll('#chart-tabs .chart-tab').forEach(b =>
-    b.classList.toggle('active', b.dataset.chart === type));
+function renderMetricPills() {
+  document.getElementById('metric-pills').innerHTML = METRIC_ORDER.map(k => {
+    const m = METRICS[k], on = activeMetrics.has(k);
+    return `<button class="chart-tab metric-pill ${on ? 'active' : ''}" aria-pressed="${on}" onclick="toggleMetric('${k}')">
+      <span class="swatch" style="background:var(--s${m.slot + 1})"></span>${m.label}</button>`;
+  }).join('');
+}
+function toggleMetric(k) {
+  if (activeMetrics.has(k)) activeMetrics.delete(k); else activeMetrics.add(k);
+  renderMetricPills();
   renderChart();
 }
 
-function baseOptions(t) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true, position: 'top', align: 'end',
-        labels: { color: t.ink2, usePointStyle: true, pointStyleWidth: 10, boxHeight: 7, font: { size: 11 } }
-      },
-      tooltip: {
-        backgroundColor: t.tooltipBg, titleColor: t.tooltipInk, bodyColor: t.tooltipInk,
-        padding: 10, cornerRadius: 8, boxPadding: 4,
-        titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 }
-      },
-      thresholdLine: false,
-    },
-  };
-}
-
 function renderChart() {
-  document.getElementById('chart-caption').textContent = CAPTIONS[activeChart];
   const note = document.getElementById('chart-note');
   note.classList.add('hidden');
   if (mainChart) { mainChart.destroy(); mainChart = null; }
   const sel = selectedIds.map(byId);
   if (!sel.length) return;
 
+  const keys = METRIC_ORDER.filter(k => activeMetrics.has(k));
+  if (!keys.length) {
+    note.textContent = 'Toggle at least one metric above to draw the chart.';
+    note.classList.remove('hidden');
+    return;
+  }
+
   const t = themeVals();
   Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
   Chart.defaults.color = t.ink3;
 
-  const holder = document.getElementById('chart-holder');
-  const horizontalCharts = ['tco','introrenew','storage'];
-  holder.style.height = horizontalCharts.includes(activeChart)
-    ? Math.max(340, sel.length * (activeChart === 'introrenew' ? 44 : 34) + 110) + 'px'
-    : '420px';
-  const ctx = document.getElementById('mainChart');
-
-  const gridOpts = { color: t.grid, lineWidth: 1 };
-  const tickFont = { size: 10 };
-
-  /* ---- 1. Cumulative cost timeline (multi-line, categorical) ---- */
-  if (activeChart === 'timeline') {
-    const lined = sel.filter(p => slotMap.get(p.id) !== undefined).slice(0, MAX_LINES);
-    if (sel.length > lined.length) {
-      note.textContent = `Showing the first ${MAX_LINES} selected providers — a readable ceiling for distinct line colors. All ${sel.length} selections remain in the other charts and the table below.`;
-      note.classList.remove('hidden');
-    }
-    const months = Array.from({length: 17}, (_, i) => i * 3); // 0..48 quarterly
-    mainChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: months.map(m => 'Mo ' + m),
-        datasets: lined.map(p => ({
-          label: p.name,
-          data: months.map(m => +cumAt(p, m).toFixed(2)),
-          borderColor: t.series[slotMap.get(p.id)],
-          backgroundColor: t.series[slotMap.get(p.id)],
-          borderWidth: 2, tension: 0, pointRadius: 0,
-          pointHoverRadius: 5, pointHoverBorderColor: t.surface, pointHoverBorderWidth: 2,
-        }))
-      },
-      options: {
-        ...baseOptions(t),
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          ...baseOptions(t).plugins,
-          tooltip: { ...baseOptions(t).plugins.tooltip,
-            itemSort: (a,b) => b.parsed.y - a.parsed.y,
-            callbacks: { label: c => ` ${c.dataset.label}: ${money(c.parsed.y)}` } },
-        },
-        scales: {
-          y: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
-               ticks: { font: tickFont, callback: v => money(v) } },
-          x: { grid: { display: false }, border: { color: t.baseline }, ticks: { font: tickFont, maxTicksLimit: 9 } }
-        }
-      }
-    });
-  }
-
-  /* ---- 2. 4-year TCO, stacked intro vs renewal spend ---- */
-  if (activeChart === 'tco') {
-    const sorted = sel.slice().sort((a,b) => tco(a) - tco(b));
-    mainChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: sorted.map(p => p.name),
-        datasets: [
-          { label: 'Spend at intro rate', data: sorted.map(p => +introSpend(p).toFixed(2)),
-            backgroundColor: t.seqLight, borderColor: t.surface, borderWidth: 1, maxBarThickness: 20, borderRadius: 3, borderSkipped: false },
-          { label: 'Spend at renewal rate', data: sorted.map(p => +renewSpend(p).toFixed(2)),
-            backgroundColor: t.seqDark, borderColor: t.surface, borderWidth: 1, maxBarThickness: 20, borderRadius: 3, borderSkipped: false },
-        ]
-      },
-      options: {
-        ...baseOptions(t),
-        indexAxis: 'y',
-        plugins: { ...baseOptions(t).plugins,
-          tooltip: { ...baseOptions(t).plugins.tooltip,
-            callbacks: {
-              label: c => ` ${c.dataset.label}: ${money(c.parsed.x)}`,
-              footer: items => 'Total: ' + money(items.reduce((s,i) => s + i.parsed.x, 0)),
-            } } },
-        scales: {
-          x: { stacked: true, beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
-               ticks: { font: tickFont, callback: v => money(v) } },
-          y: { stacked: true, grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
-        }
-      }
-    });
-  }
-
-  /* ---- 3. Intro vs renewal $/mo, grouped (one hue, two shades) ---- */
-  if (activeChart === 'introrenew') {
-    const sorted = sel.slice().sort((a,b) => hikeInfo(b).pct - hikeInfo(a).pct);
-    mainChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: sorted.map(p => p.name),
-        datasets: [
-          { label: 'Intro $/mo', data: sorted.map(p => p.promo),
-            backgroundColor: t.seqLight, maxBarThickness: 12, borderRadius: 3, borderSkipped: 'start' },
-          { label: 'Renewal $/mo', data: sorted.map(p => p.renewal),
-            backgroundColor: t.seqDark, maxBarThickness: 12, borderRadius: 3, borderSkipped: 'start' },
-        ]
-      },
-      options: {
-        ...baseOptions(t),
-        indexAxis: 'y',
-        plugins: { ...baseOptions(t).plugins,
-          tooltip: { ...baseOptions(t).plugins.tooltip,
-            callbacks: { label: c => ` ${c.dataset.label}: ${money2(c.parsed.x)}`,
-              afterBody: items => {
-                const p = sorted[items[0].dataIndex]; const h = hikeInfo(p);
-                return h.pct > 0 ? `Hike: +${Math.round(h.pct)}% after ${p.term} mo` : 'Flat pricing — no hike';
-              } } } },
-        scales: {
-          x: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
-               ticks: { font: tickFont, callback: v => '$' + v } },
-          y: { grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
-        }
-      }
-    });
-  }
-
-  /* ---- 4. Renewal shock scatter (status color for predatory) ---- */
-  if (activeChart === 'shock') {
-    const std = sel.filter(p => hikeInfo(p).tier !== 'predatory');
-    const bad = sel.filter(p => hikeInfo(p).tier === 'predatory');
-    const pt = p => ({ x: p.promo, y: Math.max(0, +hikeInfo(p).pct.toFixed(1)), name: p.name });
-    mainChart = new Chart(ctx, {
-      type: 'scatter',
-      data: { datasets: [
-        { label: 'Standard pricing', data: std.map(pt), backgroundColor: t.accent,
-          pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2 },
-        { label: 'Flagged predatory-intro (our rule)', data: bad.map(pt), backgroundColor: t.crit,
-          pointRadius: 7, pointHoverRadius: 10, pointBorderColor: t.surface, pointBorderWidth: 2, pointStyle: 'rectRot' },
-      ]},
-      options: {
-        ...baseOptions(t),
-        plugins: { ...baseOptions(t).plugins,
-          thresholdLine: { y: 100, color: t.crit, label: '100% — our predatory-intro flag' },
-          tooltip: { ...baseOptions(t).plugins.tooltip,
-            callbacks: {
-              title: items => items[0].raw.name,
-              label: c => ` Intro ${money2(c.parsed.x)}/mo → +${c.parsed.y}% at renewal`,
-            } } },
-        scales: {
-          y: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
-               title: { display: true, text: '% increase at renewal', color: t.ink3, font: { size: 10 } },
-               ticks: { font: tickFont, callback: v => v + '%' } },
-          x: { beginAtZero: true, grid: gridOpts, border: { color: t.baseline },
-               title: { display: true, text: 'Advertised intro price ($/mo)', color: t.ink3, font: { size: 10 } },
-               ticks: { font: tickFont, callback: v => '$' + v } }
-        }
-      }
-    });
-  }
-
-  /* ---- 5. Storage (single hue; unmetered in gray at full width) ---- */
-  if (activeChart === 'storage') {
-    const rows = sel.filter(p => p.storage != null || p.unmetered);
-    const omitted = sel.length - rows.length;
-    if (omitted > 0) {
-      note.textContent = `${omitted} usage-based plan${omitted>1?'s':''} (storage billed separately) omitted from this view — see the table for details.`;
-      note.classList.remove('hidden');
-    }
-    const maxFixed = Math.max(50, ...rows.filter(p => !p.unmetered).map(p => p.storage || 0));
-    const cap = Math.ceil(maxFixed * 1.2 / 10) * 10;
-    const sorted = rows.slice().sort((a,b) => (b.unmetered ? cap : b.storage) - (a.unmetered ? cap : a.storage));
-    mainChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: sorted.map(p => p.name),
-        datasets: [
-          { label: 'Fixed allocation (GB)', data: sorted.map(p => p.unmetered ? null : p.storage),
-            backgroundColor: t.accent, maxBarThickness: 18, borderRadius: 3, borderSkipped: 'start' },
-          { label: 'Unmetered (no fixed cap)', data: sorted.map(p => p.unmetered ? cap : null),
-            backgroundColor: t.ink3, maxBarThickness: 18, borderRadius: 3, borderSkipped: 'start' },
-        ]
-      },
-      options: {
-        ...baseOptions(t),
-        indexAxis: 'y',
-        skipNull: true,
-        plugins: { ...baseOptions(t).plugins,
-          tooltip: { ...baseOptions(t).plugins.tooltip,
-            callbacks: { label: c => c.datasetIndex === 1 ? ' Unmetered — fair-use policy applies' : ` ${c.parsed.x} GB included` } } },
-        scales: {
-          x: { beginAtZero: true, max: cap, grid: gridOpts, border: { color: t.baseline },
-               ticks: { font: tickFont, callback: v => v + ' GB' } },
-          y: { stacked: true, grid: { display: false }, border: { color: t.baseline }, ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
-        }
-      }
-    });
-  }
-}
-
-/* ===================== MASTER RENDER ===================== */
-function updateApp() {
-  const n = selectedIds.length;
-  document.getElementById('select-pill').textContent = `${n} SELECTED`;
-  document.getElementById('provider-count').textContent = providers.length;
-  renderKpis();
-  renderAlert();
-  renderPills();
-  renderCatalog();
-  renderTable();
-  document.getElementById('charts-section').classList.toggle('hidden', n === 0);
-  document.getElementById('table-container').classList.toggle('hidden', n === 0);
-  document.getElementById('empty-state').classList.toggle('hidden', n > 0);
-  if (n > 0) renderChart();
-}
-
-window.onload = () => {
-  document.getElementById('theme-toggle').textContent =
-    document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
-  // curated default: spans all four tiers and demos the predatory flag
-  ['hostinger-sh','namecheap-sh','siteground-sh','do-vps','hetzner-vps','kinsta-cl','lightsail-px'].forEach(id => {
-    selectedIds.push(id);
-    const used = new Set(slotMap.values());
-    for (let s = 0; s < MAX_LINES; s++) if (!used.has(s)) { slotMap.set(id, s); break; }
+  // Normalize each metric across the selection; uncapped values (Infinity)
+  // are scored just above the largest finite value.
+  const normed = {};
+  keys.forEach(k => {
+    const m = METRICS[k];
+    const raws = sel.map(p => m.raw(p));
+    const finite = raws.filter(v => Number.isFinite(v));
+    const maxF = finite.length ? Math.max(...finite) : 1;
+    const capped = raws.map(v => Number.isFinite(v) ? v : maxF * 1.25);
+    const lo = Math.min(...capped), hi = Math.max(...capped);
+    normed[k] = capped.map(v => hi === lo ? 100 :
+      Math.round((m.better === 'low' ? (hi - v) : (v - lo)) / (hi - lo) * 100));
   });
-  updateApp();
-};
-</script>
-</body>
-</html>
+
+  document.getElementById('chart-holder').style.height =
+    Math.max(340, sel.length * (keys.length * 14 + 18) + 110) + 'px';
+
+  mainChart = new Chart(document.getElementById('mainChart'), {
+    type: 'bar',
+    data: {
+      labels: sel.map(p => p.name),
+      datasets: keys.map(k => ({
+        label: METRICS[k].label,
+        data: normed[k],
+        backgroundColor: t.series[METRICS[k].slot],
+        maxBarThickness: 11, borderRadius: 3, borderSkipped: 'start',
+        categoryPercentage: 0.8, barPercentage: 0.92,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false }, // the labeled metric pills above are the legend
+        tooltip: {
+          backgroundColor: t.tooltipBg, titleColor: t.tooltipInk, bodyColor: t.tooltipInk,
+          padding: 10, cornerRadius: 8, boxPadding: 4,
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          callbacks: {
+            label: c => {
+              const k = keys[c.datasetIndex], p = sel[c.dataIndex];
+              return ` ${METRICS[k].label}: ${METRICS[k].fmt(p)} — score ${c.parsed.x}/100`;
+            }
+          }
+        },
+      },
+      scales: {
+        x: { min: 0, max: 100, grid: { color: t.grid, lineWidth: 1 }, border: { color: t.baseline },
+             title: { display: true, text: 'Relative score — 100 = best in selection', color: t.ink3, font: { size: 10 } },
+             ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, border: { color: t.baseline },
+             ticks: { font: { size: 10, weight: '600' }, color: t.ink2 } }
+      }
+    }
+  });
+}
+
+/* ===================== BEST-MATCH RECOMMENDER ===================== */
+const REC_STEPS = {
+  sites:   [1, 2, 3, 5, 10, 25, 50, 100],
+  storage: [5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500],
+  views:   [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000
